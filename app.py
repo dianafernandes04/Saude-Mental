@@ -1,0 +1,323 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import openai
+import sqlite3
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+import datetime
+import os
+import time
+
+# ========== CONFIGURAÇÕES ==========
+app = Flask(__name__)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+
+
+SECRET_KEY = '1234'
+JWT_EXPIRATION_HOURS = 1
+
+# OpenAI
+client = openai.OpenAI(api_key='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')
+
+# Tentativas de login por utilizador
+tentativas_login = {}
+
+# ========== BASE DE DADOS ==========
+def criar_base_dados():
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS mensagens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sessao_id TEXT NOT NULL,
+                utilizador TEXT NOT NULL,
+                mensagem TEXT NOT NULL,
+                resposta TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS utilizadores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                primeiro_nome TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+
+criar_base_dados()
+
+def gerar_recomendacoes_personalizadas(mensagem_usuario):
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "És um assistente de saúde mental. Com base na mensagem do utilizador, gera 3 recomendações em JSON no formato: [{\"icone\": \"sun\", \"texto\": \"Vai apanhar sol\"}, ...]. Responde apenas com o JSON. Usa ícones como sun, smile, walk, book, heart, etc."},
+                {"role": "user", "content": mensagem_usuario}
+            ],
+            temperature=0.7,
+            max_tokens=300
+        )
+
+        import json
+        conteudo = resposta.choices[0].message.content.strip()
+
+        # ⚠️ Tenta extrair apenas o JSON válido (entre os colchetes)
+        try:
+            inicio = conteudo.find('[')
+            fim = conteudo.rfind(']')
+            conteudo_json = conteudo[inicio:fim+1]
+            return json.loads(conteudo_json)
+        except Exception as erro_json:
+            print("⚠️ JSON inválido recebido:", conteudo)
+            return []
+
+    except Exception as e:
+        print("❌ Erro nas recomendações personalizadas:", e)
+        return []
+
+
+# ========== FUNÇÕES AUXILIARES ==========
+
+def gerar_token(username):
+    payload = {
+        'username': username,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=JWT_EXPIRATION_HOURS)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def verificar_token(token):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload['username']
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+def guardar_conversa(utilizador, sessao_id, mensagem, resposta):
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO mensagens (sessao_id, utilizador, mensagem, resposta)
+            VALUES (?, ?, ?, ?)
+        ''', (sessao_id, utilizador, mensagem, resposta))
+        conn.commit()
+
+def obter_primeiro_nome(username):
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT primeiro_nome FROM utilizadores WHERE username = ?', (username,))
+        row = cursor.fetchone()
+        return row[0] if row else ""
+
+def obter_contexto(sessao_id, limite=5):
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT mensagem, resposta
+            FROM mensagens
+            WHERE sessao_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (sessao_id, limite))
+        linhas = cursor.fetchall()
+        return linhas[::-1]  # ordem cronológica correta
+
+def analisar_nivel_depressao(mensagem_usuario):
+    try:
+        analise = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Avalia o nível de depressão desta mensagem do utilizador. Responde apenas com: Leve, Moderado ou Grave."},
+                {"role": "user", "content": mensagem_usuario}
+            ],
+            max_tokens=10,
+            temperature=0.0
+        )
+        return analise.choices[0].message.content.strip()
+    except:
+        return "Desconhecido"
+
+def analisar_emocao(mensagem_usuario):
+    try:
+        resposta = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Classifica a emoção principal desta mensagem (tristeza, ansiedade, raiva, alegria, medo, confusão ou neutra). Responde apenas com uma palavra."},
+                {"role": "user", "content": mensagem_usuario}
+            ],
+            max_tokens=5,
+            temperature=0
+        )
+        return resposta.choices[0].message.content.strip().lower()
+    except:
+        return "neutra"
+
+def adaptar_resposta_emocao(emocao, resposta_base, nome):
+    prefixos = {
+        "tristeza": f"Sinto muito que te sintas assim, {nome}. ",
+        "ansiedade": f"Respira fundo, {nome}, estou aqui para te ajudar. ",
+        "raiva": f"Compreendo que estejas frustrado, {nome}. ",
+        "alegria": f"Fico feliz por estares a sentir-te bem, {nome}! ",
+        "medo": f"Estás seguro aqui, {nome}. Vamos ultrapassar isto juntos. ",
+        "confusão": f"Vamos tentar esclarecer as tuas dúvidas, {nome}. ",
+        "neutra": f"{nome}, "
+    }
+    return prefixos.get(emocao, f"{nome}, ") + resposta_base
+
+def recomendar_suporte(nivel):
+    if nivel == "Grave":
+        return {"mensagem": "🌧️ Situação grave. Contacta apoio profissional."}
+    elif nivel == "Moderado":
+        return {"mensagem": "⚖️ Cuida de ti. Estas técnicas podem ajudar."}
+    else:
+        return {"mensagem": "🌤️ Continua atento à tua saúde mental."}
+
+# ========== ROTAS ==========
+@app.route('/api/registar', methods=['POST'])
+def registar():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    primeiro_nome = data.get('primeiro_nome', '')
+
+    if not username or not password or not primeiro_nome:
+        return jsonify({'mensagem': 'Preencha todos os campos!'}), 400
+
+    hashed_password = generate_password_hash(password)
+    try:
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO utilizadores (username, password, primeiro_nome) VALUES (?, ?, ?)', (username, hashed_password, primeiro_nome))
+            conn.commit()
+        return jsonify({'mensagem': 'Registo concluído!'}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({'mensagem': 'Utilizador já existe!'}), 409
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    tentativas = tentativas_login.get(username, [])
+    tentativas = [t for t in tentativas if time.time() - t < 300]
+    tentativas_login[username] = tentativas
+
+    if len(tentativas) >= 5:
+        return jsonify({'mensagem': 'Muitas tentativas. Tenta mais tarde.'}), 429
+
+    if not username or not password:
+        return jsonify({'mensagem': 'Preencha todos os campos!'}), 400
+
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT password FROM utilizadores WHERE username = ?', (username,))
+        row = cursor.fetchone()
+
+    if row and check_password_hash(row[0], password):
+        token = gerar_token(username)
+        sessao_id = f"{username}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+        return jsonify({'mensagem': 'Login feito!', 'token': token, 'sessao_id': sessao_id}), 200
+    else:
+        tentativas.append(time.time())
+        tentativas_login[username] = tentativas
+        return jsonify({'mensagem': 'Credenciais inválidas!'}), 401
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    mensagem_usuario = data.get('mensagem', '')
+    token = data.get('token', '')
+    sessao_id = data.get('sessao_id', '')
+
+    if not mensagem_usuario or not token:
+        return jsonify({"resposta": "Token inválido ou mensagem vazia!"}), 400
+
+    username = verificar_token(token)
+    if not username:
+        return jsonify({"resposta": "Token expirado ou inválido!"}), 401
+
+    try:
+        contexto = obter_contexto(sessao_id)
+        mensagens = [{"role": "system", "content": "És um assistente empático. Só podes falar de saúde mental. Responde em português de Portugal."}]
+
+        for m, r in contexto:
+            mensagens.append({"role": "user", "content": m})
+            mensagens.append({"role": "assistant", "content": r})
+
+        mensagens.append({"role": "user", "content": mensagem_usuario})
+
+        resposta_modelo = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=mensagens,
+            max_tokens=200,
+            temperature=0.7
+        )
+
+        resposta_base = resposta_modelo.choices[0].message.content.strip()
+        nivel = analisar_nivel_depressao(mensagem_usuario)
+        emocao = analisar_emocao(mensagem_usuario)
+        nome = obter_primeiro_nome(username)
+        resposta = adaptar_resposta_emocao(emocao, resposta_base, nome)
+        recomendacoes = gerar_recomendacoes_personalizadas(mensagem_usuario)
+
+
+        guardar_conversa(username, sessao_id, mensagem_usuario, resposta)
+
+        return jsonify({
+            "resposta": resposta,
+            "nivel": nivel,
+            "emocao": emocao,
+            "recomendacoes": recomendacoes
+        })
+    except Exception as e:
+        return jsonify({"resposta": f"Erro: {str(e)}"}), 500
+
+@app.route('/api/historico', methods=['POST'])
+def listar_conversas():
+    data = request.get_json()
+    token = data.get('token', '')
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'erro': 'Token inválido!'}), 401
+
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT sessao_id, MAX(timestamp), MAX(resposta)
+            FROM mensagens
+            WHERE utilizador = ?
+            GROUP BY sessao_id
+            ORDER BY MAX(timestamp) DESC
+        ''', (username,))
+        historico = cursor.fetchall()
+
+    return jsonify([
+        {
+            'sessao_id': h[0],
+            'ultima_data': h[1],
+            'ultima_resposta': h[2]
+        } for h in historico
+    ])
+
+@app.route('/api/historico/<sessao_id>', methods=['GET'])
+def obter_mensagens(sessao_id):
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT mensagem, resposta, timestamp
+            FROM mensagens
+            WHERE sessao_id = ?
+            ORDER BY timestamp
+        ''', (sessao_id,))
+        linhas = cursor.fetchall()
+    return jsonify([
+        {'mensagem': l[0], 'resposta': l[1], 'timestamp': l[2]} for l in linhas
+    ])
+
+# ========== START ==========
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
