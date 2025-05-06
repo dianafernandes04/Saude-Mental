@@ -15,22 +15,31 @@
 
   <style>
     :root {
-  --primary-color: #3C4B57;     /* Azul escuro */
-  --secondary-color: #5B6C7A;   /* Azul médio */
-  --bg-light: #D3D6D9;
-  --container-light: #FFFFFF;
-  --text-light: #3C4B57;
-  --input-light: #F3F4F6;
-  --border-light: #A7B9C5;
-  --bot-msg-light: #A7B9C5;
+      --primary-color: #B8D8E3;     /* Azul pastel suave */
+      --secondary-color: #D6EADF;   /* Verde menta suave */
+      --accent-color: #FFE8D4;      /* Coral claro */
+      --bg-light: #F9F9FB;          /* Branco quase puro */
+      --text-color: #333;           /* Cinza escuro */
+      --input-bg: #FFFFFF;          /* Branco para inputs */
+      --border-color: #DDD;         /* Cinza claro */
+      --bot-msg-light: #E1ECF4;     /* Azul claro para mensagens do bot */
 
-  --bg-dark: #1A1E21;
-  --container-dark: #2A2E31;
-  --text-dark: #D3D6D9;
-  --input-dark: #3C4B57;
-  --border-dark: #5B6C7A;
-  --bot-msg-dark: #2A2E31;
+      --bg-dark: #1A1E21;
+      --container-dark: #2A2E31;
+      --text-dark: #D3D6D9;
+      --input-dark: #3C4B57;
+      --border-dark: #5B6C7A;
+      --bot-msg-dark: #2A2E31;
+    }
+
+#logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  height: 60px;
+  width: auto;
 }
+
 
 
 .button-auth,
@@ -69,14 +78,16 @@ input,
     }
 
     header {
-      background-color: var(--primary-color);
-      color: white;
-      text-align: center;
-      padding: 2rem;
-      font-size: 1.8rem;
-      font-weight: bold;
-      position: relative;
-    }
+    background-color: var(--primary-color);
+    color: white;
+    padding: 2rem;
+    font-size: 1.8rem;
+    font-weight: bold;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
     #theme-toggle {
       position: absolute;
@@ -185,28 +196,28 @@ input,
     }
 
     input {
-      width: 100%;
-      padding: 8px 12px;
-      margin-bottom: 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border-light);
-      background-color: var(--input-light);
-      color: var(--text-light);
-      font-size: 14px;
-      transition: all 0.2s ease;
-    }
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 2px solid var(--border-color);
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  }
 
-    body.dark input {
-      border: 1px solid var(--border-dark);
-      background-color: var(--input-dark);
-      color: var(--text-dark);
-    }
+  input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(167, 199, 231, 0.4); /* Azul Suave translúcido */
+    outline: none;
+  }
 
-    input:focus {
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.3);
-      outline: none;
-    }
+  body.dark input {
+    border: 2px solid var(--border-dark);
+    background-color: var(--input-dark);
+    color: var(--text-dark);
+  }
 
     .button-auth {
       width: 100%;
@@ -427,12 +438,14 @@ input,
 
 <body>
   <header>
-    Sistema de Apoio à Saúde Mental
+    <img id="logo" src="/static/images/yourmind-logo.png" alt="Your Mind Logo">  
+    <span style="margin-left: 80px;">Your Mind</span>
     <button id="music-toggle" onclick="alternarMusica()" style="display: none;">🔈</button>
     <button id="theme-toggle" onclick="toggleTheme()">🌙</button>
   </header>
 
   <main class="layout">
+
 
     <div class="historico-lateral" id="historico-container" style="display: none;">
       <h2>Histórico</h2>
@@ -498,8 +511,8 @@ input,
     btn.innerHTML = body.classList.contains('dark') ? '☀️' : '🌙';
   }
 
-  async function registar() {
-    if (event) event.preventDefault();
+  async function registar(event) {
+    event.preventDefault();
     const primeiro_nome = document.getElementById('registar-primeiro-nome').value.trim();
     const username = document.getElementById('registar-username').value.trim();
     const password = document.getElementById('registar-password').value.trim();
@@ -527,8 +540,8 @@ input,
 }
 
 
-async function login() {
-  if(event) event.preventDefault();
+async function login(event) {
+  event.preventDefault();
 
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value.trim();
@@ -640,15 +653,36 @@ async function enviarMensagem(event) {
 
     const li = document.createElement('li');
     li.innerHTML = `
-      <button class="button-auth" onclick="retomarConversa('${conv.sessao_id}')" style="width: 100%; text-align: left; margin-bottom: 10px;">
-        <strong>${dataHora}</strong><br>
-        <span style="font-size: 13px;">${texto}</span>
-      </button>
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px;">
+        <button class="button-auth" onclick="retomarConversa('${conv.sessao_id}')" style="flex: 1; text-align: left;">
+          <strong>${dataHora}</strong><br>
+          <span style="font-size: 13px;">${texto}</span>
+        </button>
+        <button onclick="eliminarConversa('${conv.sessao_id}')" style="background: red; color: white; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer;">
+          🗑
+        </button>
+      </div>
     `;
+
     lista.appendChild(li);
   });
 }
 
+async function eliminarConversa(sessao_id) {
+  if (!confirm("Tens a certeza que queres eliminar esta conversa?")) return;
+
+  try {
+    const res = await fetch(`http://127.0.0.1:5000/api/historico/${sessao_id}`, {
+      method: 'DELETE'
+    });
+
+    const data = await res.json();
+    alert(data.mensagem);
+    carregarHistorico(); // Atualiza a lista após apagar
+  } catch (e) {
+    alert("Erro ao tentar eliminar a conversa.");
+  }
+}
 async function retomarConversa(id) {
   sessao_id = id;
   const res = await fetch(`http://127.0.0.1:5000/api/historico/${id}`);
@@ -712,6 +746,11 @@ async function retomarConversa(id) {
   else if (nivel === 'Grave') cor = 'red';
 
   nivelBox.style.color = cor;
+}
+if (typeof cardsHTML !== 'undefined' && cardsHTML.trim()) {
+  document.getElementById('recommendations').style.display = 'block';
+} else {
+  document.getElementById('recommendations').style.display = 'none';
 }
 
    

@@ -318,6 +318,14 @@ def obter_mensagens(sessao_id):
         {'mensagem': l[0], 'resposta': l[1], 'timestamp': l[2]} for l in linhas
     ])
 
+@app.route('/api/historico/<sessao_id>', methods=['DELETE'])
+def apagar_conversa(sessao_id):
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM mensagens WHERE sessao_id = ?', (sessao_id,))
+        conn.commit()
+    return jsonify({'mensagem': 'Conversa eliminada com sucesso!'}), 200
+
 # ========== START ==========
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
