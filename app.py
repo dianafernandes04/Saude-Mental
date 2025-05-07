@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
 import openai
 import sqlite3
@@ -17,7 +17,7 @@ SECRET_KEY = '1234'
 JWT_EXPIRATION_HOURS = 1
 
 # OpenAI
-client = openai.OpenAI(api_key='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')
+openai.api_key = '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'
 
 # Tentativas de login por utilizador
 tentativas_login = {}
@@ -50,7 +50,7 @@ criar_base_dados()
 
 def gerar_recomendacoes_personalizadas(mensagem_usuario):
     try:
-        resposta = client.chat.completions.create(
+        resposta = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "És um assistente de saúde mental. Com base na mensagem do utilizador, gera 3 recomendações em JSON no formato: [{\"icone\": \"sun\", \"texto\": \"Vai apanhar sol\"}, ...]. Responde apenas com o JSON. Usa ícones como sun, smile, walk, book, heart, etc."},
@@ -127,7 +127,7 @@ def obter_contexto(sessao_id, limite=5):
 
 def analisar_nivel_depressao(mensagem_usuario):
     try:
-        analise = client.chat.completions.create(
+        analise = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Avalia o nível de depressão desta mensagem do utilizador. Responde apenas com: Leve, Moderado ou Grave."},
@@ -142,7 +142,7 @@ def analisar_nivel_depressao(mensagem_usuario):
 
 def analisar_emocao(mensagem_usuario):
     try:
-        resposta = client.chat.completions.create(
+        resposta = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Classifica a emoção principal desta mensagem (tristeza, ansiedade, raiva, alegria, medo, confusão ou neutra). Responde apenas com uma palavra."},
@@ -232,16 +232,22 @@ def chat():
     mensagem_usuario = data.get('mensagem', '')
     token = data.get('token', '')
     sessao_id = data.get('sessao_id', '')
+    anonimo = data.get('anonimo', False)
 
-    if not mensagem_usuario or not token:
-        return jsonify({"resposta": "Token inválido ou mensagem vazia!"}), 400
+    if not mensagem_usuario:
+        return jsonify({"resposta": "Mensagem vazia!"}), 400
 
-    username = verificar_token(token)
-    if not username:
-        return jsonify({"resposta": "Token expirado ou inválido!"}), 401
+    if anonimo:
+        username = 'Anónimo'
+    else:
+        if not token:
+            return jsonify({"resposta": "Token inválido!"}), 400
+        username = verificar_token(token)
+        if not username:
+            return jsonify({"resposta": "Token expirado ou inválido!"}), 401
 
     try:
-        contexto = obter_contexto(sessao_id)
+        contexto = [] if anonimo else obter_contexto(sessao_id)
         mensagens = [{"role": "system", "content": "És um assistente empático. Só podes falar de saúde mental. Responde em português de Portugal."}]
 
         for m, r in contexto:
@@ -250,7 +256,7 @@ def chat():
 
         mensagens.append({"role": "user", "content": mensagem_usuario})
 
-        resposta_modelo = client.chat.completions.create(
+        resposta_modelo = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=mensagens,
             max_tokens=200,
@@ -260,12 +266,19 @@ def chat():
         resposta_base = resposta_modelo.choices[0].message.content.strip()
         nivel = analisar_nivel_depressao(mensagem_usuario)
         emocao = analisar_emocao(mensagem_usuario)
-        nome = obter_primeiro_nome(username)
+        nome = obter_primeiro_nome(username) if not anonimo else 'Amigo'
         resposta = adaptar_resposta_emocao(emocao, resposta_base, nome)
-        recomendacoes = gerar_recomendacoes_personalizadas(mensagem_usuario)
 
+        # Detectar resposta padrão de fora do tema (verificação flexível)
+        if "só posso responder a perguntas relacionadas com saúde mental" in resposta_base.lower() or \
+           "apenas posso falar sobre saúde mental" in resposta_base.lower() or \
+           "como assistente de saúde mental" in resposta_base.lower():
+            recomendacoes = []
+        else:
+            recomendacoes = gerar_recomendacoes_personalizadas(mensagem_usuario)
 
-        guardar_conversa(username, sessao_id, mensagem_usuario, resposta)
+        if not anonimo:
+            guardar_conversa(username, sessao_id, mensagem_usuario, resposta)
 
         return jsonify({
             "resposta": resposta,
@@ -298,7 +311,7 @@ def listar_conversas():
     return jsonify([
         {
             'sessao_id': h[0],
-            'ultima_data': h[1],
+            'timestamp': h[1],
             'ultima_resposta': h[2]
         } for h in historico
     ])
@@ -325,6 +338,36 @@ def apagar_conversa(sessao_id):
         cursor.execute('DELETE FROM mensagens WHERE sessao_id = ?', (sessao_id,))
         conn.commit()
     return jsonify({'mensagem': 'Conversa eliminada com sucesso!'}), 200
+
+@app.route('/api/historico', methods=['DELETE'])
+def apagar_historico():
+    data = request.get_json()
+    token = data.get('token', '')
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'erro': 'Token inválido!'}), 401
+    with sqlite3.connect('conversas.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM mensagens WHERE utilizador = ?', (username,))
+        conn.commit()
+    return jsonify({'mensagem': 'Histórico apagado com sucesso!'}), 200
+
+# ========== ROTAS DE PÁGINAS ==========
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/login')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/chat')
+def chat_page():
+    return render_template('chat.html')
+
+@app.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory('static', path)
 
 # ========== START ==========
 if __name__ == '__main__':

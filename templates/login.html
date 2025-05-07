@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Sistema de Apoio à Saúde Mental</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <header>
+        <img id="logo" src="static/images/yourmind-logo.png" alt="Logo">
+        <h1>Sistema de Apoio à Saúde Mental</h1>
+        <button id="theme-toggle">
+            <i data-lucide="moon"></i>
+        </button>
+    </header>
+
+    <main>
+        <div class="container" id="login-container">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="text" id="username" placeholder="Username" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="button-auth">Entrar</button>
+            </form>
+            <p class="switch-form">Não tens conta? <a href="#" id="show-register">Regista-te</a></p>
+        </div>
+
+        <div class="container" id="register-container" style="display: none;">
+            <h2>Registo</h2>
+            <form id="register-form">
+                <input type="text" id="reg-username" placeholder="Username" required>
+                <input type="text" id="reg-firstname" placeholder="Primeiro Nome" required>
+                <input type="password" id="reg-password" placeholder="Password" required>
+                <button type="submit" class="button-auth">Registar</button>
+            </form>
+            <p class="switch-form">Já tens conta? <a href="#" id="show-login">Faz login</a></p>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script src="static/common.js"></script>
+    <script src="static/auth.js"></script>
+    <script>
+    document.getElementById('logo').onclick = function() {
+        window.location.href = '/';
+    };
+    </script>
+</body>
+</html> 

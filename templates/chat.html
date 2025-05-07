@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat - Sistema de Apoio à Saúde Mental</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <header>
+        <img id="logo" src="static/images/yourmind-logo.png" alt="Logo">
+        <h1>Sistema de Apoio à Saúde Mental</h1>
+        <button id="theme-toggle">
+            <i data-lucide="moon"></i>
+        </button>
+        <button id="music-toggle">
+            <i data-lucide="music"></i>
+        </button>
+    </header>
+
+    <main>
+        <div class="layout">
+            <div class="historico-lateral">
+                <div class="container">
+                    <button id="anon-mode-btn" class="button-auth" style="margin-bottom: 15px; background: #333; color: #fff;">Modo Anónimo</button>
+                    <h2>Histórico</h2>
+                    <button id="nova-conversa-btn" class="button-auth">Nova Conversa</button>
+                    <button id="apagar-historico-btn" class="button-auth" style="background:#c0392b; color:#fff; margin-bottom:10px;">Apagar Histórico</button>
+                    <div id="historico-lista"></div>
+                    <button id="logout-btn">Sair</button>
+                </div>
+            </div>
+
+            <div class="conteudo-central">
+                <div id="chat-container">
+                    <div id="chat-messages"></div>
+                    <div class="input-group">
+                        <input type="text" id="message-input" placeholder="Escreve a tua mensagem...">
+                        <button id="mic-btn" type="button"><i data-lucide="mic"></i></button>
+                        <button id="send-btn">
+                            <i data-lucide="send"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Audio Element -->
+    <audio id="background-music" loop>
+        <source src="static/musica/relaxante.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- JavaScript -->
+    <script src="static/common.js"></script>
+    <script src="static/chat.js"></script>
+    <script>
+    document.getElementById('logo').onclick = function() {
+        window.location.href = '/';
+    };
+    </script>
+</body>
+</html> 
