@@ -1,23 +1,23 @@
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 import os
 import time
+from functools import wraps
 
 # ========== CONFIGURAÇÕES ==========
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
-
 SECRET_KEY = '1234'
 JWT_EXPIRATION_HOURS = 1
 
 # OpenAI
-openai.api_key = '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'
+client = OpenAI(api_key='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')
 
 # Tentativas de login por utilizador
 tentativas_login = {}
@@ -50,7 +50,7 @@ criar_base_dados()
 
 def gerar_recomendacoes_personalizadas(mensagem_usuario):
     try:
-        resposta = openai.ChatCompletion.create(
+        resposta = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "És um assistente de saúde mental. Com base na mensagem do utilizador, gera 3 recomendações em JSON no formato: [{\"icone\": \"sun\", \"texto\": \"Vai apanhar sol\"}, ...]. Responde apenas com o JSON. Usa ícones como sun, smile, walk, book, heart, etc."},
@@ -127,7 +127,7 @@ def obter_contexto(sessao_id, limite=5):
 
 def analisar_nivel_depressao(mensagem_usuario):
     try:
-        analise = openai.ChatCompletion.create(
+        analise = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Avalia o nível de depressão desta mensagem do utilizador. Responde apenas com: Leve, Moderado ou Grave."},
@@ -142,7 +142,7 @@ def analisar_nivel_depressao(mensagem_usuario):
 
 def analisar_emocao(mensagem_usuario):
     try:
-        resposta = openai.ChatCompletion.create(
+        resposta = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "Classifica a emoção principal desta mensagem (tristeza, ansiedade, raiva, alegria, medo, confusão ou neutra). Responde apenas com uma palavra."},
@@ -174,6 +174,21 @@ def recomendar_suporte(nivel):
         return {"mensagem": "⚖️ Cuida de ti. Estas técnicas podem ajudar."}
     else:
         return {"mensagem": "🌤️ Continua atento à tua saúde mental."}
+
+# ========== DECORADORES ==========
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            return jsonify({'erro': 'Token não fornecido'}), 401
+            
+        username = verificar_token(token)
+        if not username:
+            return jsonify({'erro': 'Token inválido'}), 401
+            
+        return f(username, *args, **kwargs)
+    return decorated
 
 # ========== ROTAS ==========
 @app.route('/api/registar', methods=['POST'])
@@ -242,9 +257,9 @@ def chat():
     else:
         if not token:
             return jsonify({"resposta": "Token inválido!"}), 400
-    username = verificar_token(token)
-    if not username:
-        return jsonify({"resposta": "Token expirado ou inválido!"}), 401
+        username = verificar_token(token)
+        if not username:
+            return jsonify({"resposta": "Token expirado ou inválido!"}), 401
 
     try:
         contexto = [] if anonimo else obter_contexto(sessao_id)
@@ -264,7 +279,7 @@ def chat():
 
         mensagens.append({"role": "user", "content": mensagem_usuario})
 
-        resposta_modelo = openai.ChatCompletion.create(
+        resposta_modelo = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=mensagens,
             max_tokens=200,
@@ -364,6 +379,123 @@ def apagar_historico():
         cursor.execute('DELETE FROM mensagens WHERE utilizador = ?', (username,))
         conn.commit()
     return jsonify({'mensagem': 'Histórico apagado com sucesso!'}), 200
+
+@app.route('/calendario')
+def calendario():
+    return render_template('calendario.html')
+
+@app.route('/api/emocoes', methods=['POST'])
+def get_emocoes():
+    try:
+        data = request.get_json()
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        
+        if not token:
+            return jsonify({'erro': 'Token não fornecido'}), 401
+
+        # Decodificar o token para obter o username
+        username = verificar_token(token)
+        if not username:
+            return jsonify({'erro': 'Token inválido'}), 401
+
+        mes = data.get('mes')
+        ano = data.get('ano')
+
+        if not mes or not ano:
+            return jsonify({'erro': 'Mês e ano são obrigatórios'}), 400
+
+        conn = sqlite3.connect('conversas.db')
+        cursor = conn.cursor()
+
+        # Buscar todas as mensagens do mês/ano especificado
+        cursor.execute('''
+            SELECT m.timestamp, m.mensagem
+            FROM mensagens m
+            WHERE m.utilizador = ? 
+            AND strftime('%m', datetime(m.timestamp)) = ?
+            AND strftime('%Y', datetime(m.timestamp)) = ?
+            ORDER BY m.timestamp
+        ''', (username, f"{mes:02d}", str(ano)))
+
+        mensagens = cursor.fetchall()
+        conn.close()
+
+        # Agrupar emoções por dia e calcular a média
+        emocoes_por_dia = {}
+        for timestamp, mensagem in mensagens:
+            data = timestamp.split(' ')[0]  # Pega só a data (YYYY-MM-DD)
+            if data not in emocoes_por_dia:
+                emocoes_por_dia[data] = {'contagem': {}, 'total': 0}
+            
+            # Analisar a emoção da mensagem
+            emocao = analisar_emocao(mensagem)
+            if emocao:
+                emocoes_por_dia[data]['contagem'][emocao] = emocoes_por_dia[data]['contagem'].get(emocao, 0) + 1
+                emocoes_por_dia[data]['total'] += 1
+
+        # Determinar a emoção predominante para cada dia
+        resultado = []
+        for data, info in emocoes_por_dia.items():
+            if info['total'] > 0:
+                # Encontrar a emoção mais frequente
+                emocao_predominante = max(info['contagem'].items(), key=lambda x: x[1])[0]
+                resultado.append({
+                    'data': data,
+                    'emocao': emocao_predominante
+                })
+
+        return jsonify(resultado)
+
+    except Exception as e:
+        print("Erro ao buscar emoções:", e)
+        return jsonify({'erro': 'Erro interno do servidor'}), 500
+
+@app.route('/api/conversas', methods=['POST'])
+@token_required
+def get_conversas(username):
+    data = request.get_json()
+    dia = data.get('dia')
+    mes = data.get('mes')
+    ano = data.get('ano')
+    
+    if not all([dia, mes, ano]):
+        return jsonify({'error': 'Data inválida'}), 400
+        
+    try:
+        # Criar data inicial e final para o dia específico
+        data_inicio = f"{ano}-{mes:02d}-{dia:02d} 00:00:00"
+        data_fim = f"{ano}-{mes:02d}-{dia:02d} 23:59:59"
+        
+        # Buscar conversas do usuário para o dia específico
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT mensagem, resposta, timestamp, sessao_id
+                FROM mensagens
+                WHERE utilizador = ?
+                AND timestamp BETWEEN ? AND ?
+                ORDER BY timestamp DESC
+            ''', (username, data_inicio, data_fim))
+            
+            conversas = cursor.fetchall()
+            
+        # Converter para JSON
+        conversas_json = []
+        for mensagem, resposta, timestamp, sessao_id in conversas:
+            emocao = analisar_emocao(mensagem)
+            conversas_json.append({
+                'data': timestamp,
+                'texto': mensagem,
+                'resposta': resposta,
+                'emocao': emocao,
+                'sessao_id': sessao_id
+            })
+        
+        return jsonify(conversas_json)
+        
+    except Exception as e:
+        print("Erro ao buscar conversas:", e)
+        return jsonify({'erro': 'Erro interno do servidor'}), 500
 
 # ========== ROTAS DE PÁGINAS ==========
 @app.route('/')

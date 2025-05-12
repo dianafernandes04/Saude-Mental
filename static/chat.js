@@ -27,9 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isAnon) {
         document.querySelector('.historico-lateral').style.display = 'none';
-        // Remove completamente o gráfico de emoções do DOM
-        const graficoWrapper = document.getElementById('grafico-emocional-wrapper');
-        if (graficoWrapper) graficoWrapper.remove();
         // Aviso de modo anónimo
         const aviso = document.createElement('div');
         aviso.textContent = 'Você está em modo anónimo. Nenhuma conversa será guardada.';
@@ -225,23 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.addEventListener('click', () => loadSession(sessao.sessao_id));
                     historicoLista.appendChild(item);
                 });
-                // Ordena por timestamp crescente (mais antigo primeiro)
-                const dataOrdenada = data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                let sessoesParaGrafico = await Promise.all(
-                    dataOrdenada.slice(-10).map(async sessao => {
-                        const resp = await fetch(`/api/historico/${sessao.sessao_id}`);
-                        const mensagens = await resp.json();
-                        const ultima = mensagens[mensagens.length - 1];
-                        return {
-                            timestamp: sessao.timestamp,
-                            emocao: ultima && ultima.emocao ? ultima.emocao : 'neutra'
-                        };
-                    })
-                );
-                // Só mostra o gráfico se não estiver em modo anónimo
-                if (!isAnon) {
-                    renderEmocaoChart(sessoesParaGrafico);
-                }
             }
         } catch (error) {
             console.error('Erro ao carregar histórico:', error);
@@ -311,9 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark');
         document.querySelector('.historico-lateral').style.display = 'none';
         chatMessages.innerHTML = '';
-        // Remove o gráfico de emoções do DOM
-        const graficoWrapper = document.getElementById('grafico-emocional-wrapper');
-        if (graficoWrapper) graficoWrapper.remove();
         // Aviso de modo anónimo (menor e com botão)
         let aviso = document.getElementById('anon-aviso');
         if (!aviso) {

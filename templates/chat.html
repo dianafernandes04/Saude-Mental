@@ -14,10 +14,6 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="static/style.css">
-
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
     <header>
@@ -40,6 +36,9 @@
         <div id="menu-dropdown" style="display:none; position:absolute; top:60px; right:20px; background:#f9f9fb; color:#475866; border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,0.10); min-width:220px; z-index:1000; font-family:'Poppins',sans-serif; font-weight:500; font-size:0.88em; padding:0; border:none;">
             <div class="menu-item" id="minijogos-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">
                 Mini-Jogos de Relaxamento
+            </div>
+            <div class="menu-item" id="calendario-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">
+                Calendário de Emoções
             </div>
         </div>
         <!-- Modal de Perfil -->
@@ -85,14 +84,6 @@
                         </button>
                     </div>
                 </div>
-
-                <div id="grafico-emocional-wrapper" data-anon-only="false">
-                    <div id="grafico-emocional-container">
-                        <h3 class="grafico-titulo">Tendência Emocional</h3>
-                        <canvas id="emocaoChart" width="380" height="170"></canvas>
-                        <!-- A legenda será inserida automaticamente pelo JS -->
-                    </div>
-                </div>
             </div>
         </div>
     </main>
@@ -104,7 +95,6 @@
 
     <!-- JavaScript -->
     <script src="static/common.js"></script>
-    <script src="static/chart.js"></script>
     <script src="static/chat.js"></script>
     <script>
     document.getElementById('logo').onclick = function() {
@@ -130,6 +120,90 @@
     document.getElementById('minijogos-link').onmouseout = function() {
         this.style.background = 'none';
     };
+    // Hover effect para o calendário
+    document.getElementById('calendario-link').onmouseover = function() {
+        this.style.background = '#eaf6fa';
+    };
+    document.getElementById('calendario-link').onmouseout = function() {
+        this.style.background = 'none';
+    };
+    // Navegação para o calendário
+    document.getElementById('calendario-link').onclick = function() {
+        window.location.href = '/calendario';
+    };
+
+    // Função para carregar e exibir uma conversa específica
+    async function carregarConversaEspecifica(sessaoId) {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            // Buscar as mensagens da sessão
+            const response = await fetch(`/api/historico/${sessaoId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao carregar conversa');
+            }
+
+            const mensagens = await response.json();
+            const chatMessages = document.getElementById('chat-messages');
+            
+            // Limpar mensagens anteriores
+            chatMessages.innerHTML = '';
+            
+            // Atualizar sessão atual
+            window.sessaoAtual = sessaoId;
+            
+            // Destacar a conversa no histórico
+            const historicoItems = document.querySelectorAll('.historico-item');
+            historicoItems.forEach(item => {
+                if (item.dataset.sessaoId === sessaoId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Exibir as mensagens
+            mensagens.forEach(msg => {
+                // Mensagem do usuário
+                const userDiv = document.createElement('div');
+                userDiv.className = 'message user-message';
+                userDiv.innerHTML = `<p>${msg.mensagem}</p>`;
+                chatMessages.appendChild(userDiv);
+
+                // Resposta do assistente
+                const botDiv = document.createElement('div');
+                botDiv.className = 'message bot-message';
+                botDiv.innerHTML = `<p>${msg.resposta}</p>`;
+                chatMessages.appendChild(botDiv);
+            });
+
+            // Rolar para o final da conversa
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+        } catch (error) {
+            console.error('Erro ao carregar conversa:', error);
+        }
+    }
+
+    // Verificar se veio do calendário e carregar a sessão específica
+    window.addEventListener('DOMContentLoaded', async () => {
+        const ultimaSessao = localStorage.getItem('ultima_sessao');
+        if (ultimaSessao) {
+            // Limpar o storage para não interferir em futuras navegações
+            localStorage.removeItem('ultima_sessao');
+            
+            // Esperar um momento para garantir que o histórico foi carregado
+            setTimeout(async () => {
+                await carregarConversaEspecifica(ultimaSessao);
+            }, 500);
+        }
+    });
     </script>
 </body>
 </html> 

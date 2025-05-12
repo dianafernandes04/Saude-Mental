@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendário de Emoções</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .calendar-nav-btn {
+            background: none;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .calendar-nav-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        .weekday {
+            font-weight: 600;
+            color: #475866;
+            padding: 8px;
+            background: #f5f7f9;
+            border-radius: 8px;
+        }
+        .calendar-day {
+            padding: 8px;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 80px;
+            align-items: center;
+            justify-content: center;
+        }
+        .calendar-day.empty {
+            background: transparent;
+            border: none;
+        }
+        .calendar-day.today {
+            border: 2px solid var(--primary-color);
+            background: #f5f7f9;
+        }
+        .calendar-day .date {
+            font-weight: 500;
+            font-size: 1.1em;
+            color: #475866;
+        }
+        .calendar-day .emoji {
+            font-size: 1.8em;
+            height: 1.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        body.dark #calendario-container {
+            background: var(--container-dark);
+        }
+        body.dark .weekday {
+            background: var(--input-dark);
+            color: var(--text-dark);
+        }
+        body.dark .calendar-day {
+            background: var(--container-dark);
+            border-color: var(--border-dark);
+        }
+        body.dark .calendar-day .date {
+            color: var(--text-dark);
+        }
+        body.dark .calendar-day.today {
+            background: var(--input-dark);
+        }
+
+        /* Estilos do Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 40px auto;
+            padding: 25px;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f5f7f9;
+            transition: all 0.2s;
+        }
+
+        .close-modal:hover {
+            background: #e0e4e8;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-right: 40px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            margin: -10px;
+            max-height: calc(85vh - 100px);
+        }
+
+        .conversation-item {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #f5f7f9;
+            border: 1px solid #eee;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .conversation-item:hover {
+            transform: translateX(5px);
+            background: #edf2f7;
+        }
+
+        .conversation-time {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .conversation-emotion {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            background: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .conversation-emotion span:first-child {
+            font-size: 1.2em;
+        }
+
+        .conversation-text {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            color: #2c3e50;
+        }
+
+        /* Dark mode */
+        body.dark .modal-content {
+            background-color: var(--container-dark);
+            color: var(--text-dark);
+        }
+
+        body.dark .conversation-item {
+            background: var(--input-dark);
+            border-color: var(--border-dark);
+        }
+
+        body.dark .modal-header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        body.dark .close-modal {
+            color: var(--text-dark);
+            background: var(--input-dark);
+        }
+
+        body.dark .close-modal:hover {
+            background: var(--border-dark);
+        }
+
+        body.dark .conversation-emotion {
+            background: var(--container-dark);
+        }
+
+        body.dark .conversation-text {
+            color: var(--text-dark);
+        }
+
+        /* Scrollbar personalizada */
+        .conversation-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .conversation-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .conversation-list::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        body.dark .conversation-list::-webkit-scrollbar-thumb {
+            background: var(--border-dark);
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 20px auto;
+                padding: 20px;
+            }
+
+            .conversation-list {
+                max-height: calc(85vh - 80px);
+            }
+
+            .conversation-item {
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal {
+                padding: 10px;
+            }
+
+            .modal-content {
+                margin: 10px auto;
+                padding: 15px;
+            }
+
+            .conversation-emotion {
+                padding: 4px 10px;
+                font-size: 0.9em;
+            }
+        }
+
+        .calendar-day {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .calendar-day:not(.empty):hover {
+            background-color: #f0f0f0;
+        }
+
+        body.dark .calendar-day:not(.empty):hover {
+            background-color: var(--input-dark);
+        }
+    </style>
+</head>
+<body class="calendario-page">
+    <header>
+        <img id="logo" src="/static/images/yourmind-logo.png" alt="Logo">
+        <h1>Calendário de Emoções</h1>
+        <button id="voltar-chat">
+            <i data-lucide="arrow-left"></i> Voltar ao Chat
+        </button>
+    </header>
+
+    <main>
+        <div id="calendario-container">
+            <div id="calendario-header">
+                <button id="prev-month" class="calendar-nav-btn">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <h2 id="month-year"></h2>
+                <button id="next-month" class="calendar-nav-btn">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+            <div id="calendario">
+                <div class="weekday">Dom</div>
+                <div class="weekday">Seg</div>
+                <div class="weekday">Ter</div>
+                <div class="weekday">Qua</div>
+                <div class="weekday">Qui</div>
+                <div class="weekday">Sex</div>
+                <div class="weekday">Sáb</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para mostrar conversas -->
+    <div id="conversationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-header">
+                <h2 id="modalDate"></h2>
+            </div>
+            <div id="conversationList" class="conversation-list">
+                <!-- As conversas serão inseridas aqui dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        document.getElementById('voltar-chat').onclick = function() {
+            window.location.href = '/chat';
+        };
+        document.getElementById('logo').onclick = function() {
+            window.location.href = '/';
+        };
+
+        // Mapeamento de emoções para emojis
+        const emocaoParaEmoji = {
+            'alegria': '😊',
+            'neutra': '😐',
+            'ansiedade': '😰',
+            'tristeza': '😢',
+            'raiva': '😠',
+            'medo': '😨',
+            'confusao': '😕'
+        };
+
+        // Função para gerar o calendário
+        function gerarCalendario(mes, ano) {
+            const calendario = document.getElementById('calendario');
+            const firstDay = new Date(ano, mes, 1);
+            const lastDay = new Date(ano, mes + 1, 0);
+            const startingDay = firstDay.getDay();
+            const monthLength = lastDay.getDate();
+            
+            // Limpar dias anteriores
+            const dias = calendario.querySelectorAll('.calendar-day');
+            dias.forEach(dia => dia.remove());
+            
+            // Adicionar espaços vazios para os dias antes do primeiro dia do mês
+            for (let i = 0; i < startingDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day empty';
+                calendario.appendChild(emptyDay);
+            }
+            
+            // Adicionar os dias do mês
+            const hoje = new Date();
+            const diasDoMes = [];
+            
+            for (let i = 1; i <= monthLength; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                if (hoje.getDate() === i && hoje.getMonth() === mes && hoje.getFullYear() === ano) {
+                    day.className += ' today';
+                }
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'date';
+                dateSpan.textContent = i;
+                day.appendChild(dateSpan);
+                
+                const emojiSpan = document.createElement('span');
+                emojiSpan.className = 'emoji';
+                day.appendChild(emojiSpan);
+                
+                // Adicionar evento de clique
+                day.addEventListener('click', () => mostrarConversas(i, mes, ano));
+                
+                calendario.appendChild(day);
+                diasDoMes.push(day);
+            }
+            
+            // Atualizar o cabeçalho do mês
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                              'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            document.getElementById('month-year').textContent = `${monthNames[mes]} ${ano}`;
+            
+            return diasDoMes;
+        }
+
+        // Cache para armazenar as emoções do mês atual
+        let cachedEmotions = new Map();
+        
+        // Função para carregar as emoções do mês
+        async function carregarEmocoes(mes, ano) {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error('Token não encontrado');
+                    return;
+                }
+
+                const response = await fetch('/api/emocoes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        mes: mes + 1,
+                        ano: ano
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Emoções recebidas:', data);
+                    
+                    // Limpar cache anterior
+                    cachedEmotions.clear();
+                    
+                    // Processar e cachear as emoções
+                    data.forEach(emocao => {
+                        const dia = new Date(emocao.data).getDate();
+                        const emoji = emocaoParaEmoji[emocao.emocao];
+                        if (emoji) {
+                            cachedEmotions.set(dia, {
+                                emoji: emoji,
+                                emocao: emocao.emocao
+                            });
+                        }
+                    });
+                    
+                    // Atualizar o calendário com as emoções
+                    atualizarEmojisCalendario();
+                } else {
+                    const erro = await response.json();
+                    console.error('Erro ao carregar emoções:', erro);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar emoções:', error);
+            }
+        }
+
+        // Função para atualizar os emojis no calendário
+        function atualizarEmojisCalendario() {
+            const dias = document.querySelectorAll('.calendar-day:not(.empty)');
+            dias.forEach(dia => {
+                const diaNum = parseInt(dia.querySelector('.date').textContent);
+                const emojiElement = dia.querySelector('.emoji');
+                const dadosEmocao = cachedEmotions.get(diaNum);
+                
+                if (dadosEmocao) {
+                    emojiElement.textContent = dadosEmocao.emoji;
+                    console.log(`Emoji ${dadosEmocao.emoji} definido para dia ${diaNum} (${dadosEmocao.emocao})`);
+                } else {
+                    emojiElement.textContent = '';
+                }
+            });
+        }
+
+        // Event listeners para navegação
+        document.getElementById('prev-month').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            gerarCalendario(currentMonth, currentYear);
+            carregarEmocoes(currentMonth, currentYear);
+        });
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            gerarCalendario(currentMonth, currentYear);
+            carregarEmocoes(currentMonth, currentYear);
+        });
+
+        // Inicializar variáveis de data
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
+        // Gerar calendário inicial e carregar emoções
+        gerarCalendario(currentMonth, currentYear);
+        carregarEmocoes(currentMonth, currentYear);
+
+        // Função para formatar data
+        function formatarData(data) {
+            const options = { 
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            };
+            return new Date(data).toLocaleDateString('pt-BR', options);
+        }
+
+        // Função para formatar hora
+        function formatarHora(data) {
+            const options = {
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return new Date(data).toLocaleTimeString('pt-BR', options);
+        }
+
+        // Função para carregar conversas de um dia específico
+        async function carregarConversas(dia, mes, ano) {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    console.error('Token não encontrado');
+                    return;
+                }
+
+                const response = await fetch('/api/conversas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        dia: dia,
+                        mes: mes + 1,
+                        ano: ano
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data;
+                } else {
+                    console.error('Erro ao carregar conversas');
+                    return [];
+                }
+            } catch (error) {
+                console.error('Erro ao carregar conversas:', error);
+                return [];
+            }
+        }
+
+        // Função para mostrar o modal com as conversas
+        async function mostrarConversas(dia, mes, ano) {
+            const modal = document.getElementById('conversationModal');
+            const modalDate = document.getElementById('modalDate');
+            const conversationList = document.getElementById('conversationList');
+            
+            // Formatar a data para o título
+            const data = new Date(ano, mes, dia);
+            modalDate.textContent = formatarData(data);
+            
+            // Limpar lista anterior
+            conversationList.innerHTML = '<div style="text-align: center; padding: 20px;">Carregando conversas...</div>';
+            
+            // Mostrar modal
+            modal.style.display = 'block';
+            
+            // Carregar conversas
+            const conversas = await carregarConversas(dia, mes, ano);
+            
+            if (conversas.length === 0) {
+                conversationList.innerHTML = '<div style="text-align: center; padding: 20px;">Nenhuma conversa encontrada para este dia.</div>';
+                return;
+            }
+            
+            // Ordenar conversas por hora (mais recentes primeiro)
+            conversas.sort((a, b) => new Date(b.data) - new Date(a.data));
+            
+            // Renderizar conversas
+            conversationList.innerHTML = conversas.map(conversa => {
+                const sessaoId = conversa.sessao_id;
+                return `
+                    <div class="conversation-item" onclick="redirecionarParaChat('${sessaoId}')">
+                        <div class="conversation-time">${formatarHora(conversa.data)}</div>
+                        <div class="conversation-emotion">
+                            <span>${emocaoParaEmoji[conversa.emocao] || '😐'}</span>
+                            <span>${conversa.emocao}</span>
+                        </div>
+                        <div class="conversation-text">${conversa.texto}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Função para redirecionar para o chat
+        function redirecionarParaChat(sessaoId) {
+            // Armazenar a sessão ID para ser recuperada na página do chat
+            localStorage.setItem('ultima_sessao', sessaoId);
+            // Forçar um reload completo para garantir que o chat será reinicializado
+            window.location.replace('/chat');
+        }
+
+        // Configurar fechamento do modal
+        document.querySelector('.close-modal').addEventListener('click', () => {
+            document.getElementById('conversationModal').style.display = 'none';
+        });
+
+        // Fechar modal ao clicar fora dele
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('conversationModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 
