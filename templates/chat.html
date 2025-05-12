@@ -14,17 +14,51 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="static/style.css">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
     <header>
         <img id="logo" src="static/images/yourmind-logo.png" alt="Logo">
         <h1>Sistema de Apoio à Saúde Mental</h1>
-        <button id="theme-toggle">
-            <i data-lucide="moon"></i>
-        </button>
-        <button id="music-toggle">
-            <i data-lucide="music"></i>
-        </button>
+        <div class="header-actions">
+            <button id="music-toggle">
+                <i data-lucide="music"></i>
+            </button>
+            <button id="theme-toggle">
+                <i data-lucide="moon"></i>
+            </button>
+            <button id="menu-toggle">
+                <i data-lucide="menu"></i>
+            </button>
+            <button id="profile-btn">
+                <i data-lucide="user"></i>
+            </button>
+        </div>
+        <div id="menu-dropdown" style="display:none; position:absolute; top:60px; right:20px; background:#f9f9fb; color:#475866; border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,0.10); min-width:220px; z-index:1000; font-family:'Poppins',sans-serif; font-weight:500; font-size:0.88em; padding:0; border:none;">
+            <div class="menu-item" id="minijogos-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">
+                Mini-Jogos de Relaxamento
+            </div>
+        </div>
+        <!-- Modal de Perfil -->
+        <div id="profile-modal-overlay"></div>
+        <div id="profile-modal">
+            <h2>Perfil do Utilizador</h2>
+            <label for="profile-name">Nome:</label>
+            <input id="profile-name" type="text">
+            <div style="margin-bottom:16px;">Escolhe o teu avatar:</div>
+            <div id="avatar-list">
+                <img src="static/avatars/avatar1.png" class="avatar-option" data-avatar="avatar1.png">
+                <img src="static/avatars/avatar2.png" class="avatar-option" data-avatar="avatar2.png">
+                <img src="static/avatars/avatar3.png" class="avatar-option" data-avatar="avatar3.png">
+                <img src="static/avatars/avatar4.png" class="avatar-option" data-avatar="avatar4.png">
+                <img src="static/avatars/avatar5.png" class="avatar-option" data-avatar="avatar5.png">
+                <img src="static/avatars/avatar6.png" class="avatar-option" data-avatar="avatar6.png">
+            </div>
+            <button id="save-profile-btn" class="button-auth">Guardar</button>
+        </div>
     </header>
 
     <main>
@@ -51,6 +85,14 @@
                         </button>
                     </div>
                 </div>
+
+                <div id="grafico-emocional-wrapper" data-anon-only="false">
+                    <div id="grafico-emocional-container">
+                        <h3 class="grafico-titulo">Tendência Emocional</h3>
+                        <canvas id="emocaoChart" width="380" height="170"></canvas>
+                        <!-- A legenda será inserida automaticamente pelo JS -->
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -62,10 +104,31 @@
 
     <!-- JavaScript -->
     <script src="static/common.js"></script>
+    <script src="static/chart.js"></script>
     <script src="static/chat.js"></script>
     <script>
     document.getElementById('logo').onclick = function() {
         window.location.href = '/';
+    };
+    // Menu dropdown
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    menuToggle.onclick = function(e) {
+        e.stopPropagation();
+        menuDropdown.style.display = menuDropdown.style.display === 'block' ? 'none' : 'block';
+    };
+    document.getElementById('minijogos-link').onclick = function() {
+        window.location.href = '/minijogos';
+    };
+    document.body.addEventListener('click', function() {
+        menuDropdown.style.display = 'none';
+    });
+    // Hover effect para o menu
+    document.getElementById('minijogos-link').onmouseover = function() {
+        this.style.background = '#eaf6fa';
+    };
+    document.getElementById('minijogos-link').onmouseout = function() {
+        this.style.background = 'none';
     };
     </script>
 </body>

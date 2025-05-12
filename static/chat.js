@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
     checkAuth();
 
+    // Initialize Lucide icons
+    lucide.createIcons();
+
     const chatMessages = document.getElementById('chat-messages');
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-btn');
@@ -24,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isAnon) {
         document.querySelector('.historico-lateral').style.display = 'none';
+        // Remove completamente o gráfico de emoções do DOM
+        const graficoWrapper = document.getElementById('grafico-emocional-wrapper');
+        if (graficoWrapper) graficoWrapper.remove();
         // Aviso de modo anónimo
         const aviso = document.createElement('div');
         aviso.textContent = 'Você está em modo anónimo. Nenhuma conversa será guardada.';
@@ -219,6 +225,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.addEventListener('click', () => loadSession(sessao.sessao_id));
                     historicoLista.appendChild(item);
                 });
+                // Ordena por timestamp crescente (mais antigo primeiro)
+                const dataOrdenada = data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                let sessoesParaGrafico = await Promise.all(
+                    dataOrdenada.slice(-10).map(async sessao => {
+                        const resp = await fetch(`/api/historico/${sessao.sessao_id}`);
+                        const mensagens = await resp.json();
+                        const ultima = mensagens[mensagens.length - 1];
+                        return {
+                            timestamp: sessao.timestamp,
+                            emocao: ultima && ultima.emocao ? ultima.emocao : 'neutra'
+                        };
+                    })
+                );
+                // Só mostra o gráfico se não estiver em modo anónimo
+                if (!isAnon) {
+                    renderEmocaoChart(sessoesParaGrafico);
+                }
             }
         } catch (error) {
             console.error('Erro ao carregar histórico:', error);
@@ -288,6 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark');
         document.querySelector('.historico-lateral').style.display = 'none';
         chatMessages.innerHTML = '';
+        // Remove o gráfico de emoções do DOM
+        const graficoWrapper = document.getElementById('grafico-emocional-wrapper');
+        if (graficoWrapper) graficoWrapper.remove();
         // Aviso de modo anónimo (menor e com botão)
         let aviso = document.getElementById('anon-aviso');
         if (!aviso) {
@@ -354,6 +380,86 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert('Erro ao apagar histórico.');
                 }
             }
+        });
+    }
+
+    document.getElementById('play-meditacao').onclick = function() {
+        const audio = document.getElementById('audio-meditacao');
+        if(audio.paused) {
+            audio.play();
+            this.textContent = 'Pausar Meditação';
+        } else {
+            audio.pause();
+            this.textContent = 'Tocar Meditação';
+        }
+    };
+
+    // --- Modal de Perfil ---
+    const profileBtn = document.getElementById('profile-btn');
+    const profileModal = document.getElementById('profile-modal');
+    const profileOverlay = document.getElementById('profile-modal-overlay');
+    const saveProfileBtn = document.getElementById('save-profile-btn');
+    const profileNameInput = document.getElementById('profile-name');
+    const avatarList = document.getElementById('avatar-list');
+    let selectedAvatar = localStorage.getItem('avatar') || 'avatar1.png';
+
+    // Ensure profile button is properly styled and initialized
+    if (profileBtn) {
+        profileBtn.style.zIndex = '1500';
+        profileBtn.style.position = 'relative';
+        
+        // Add click event listener directly
+        profileBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
+            // Preencher nome e avatar atuais
+            profileNameInput.value = localStorage.getItem('profileName') || '';
+            Array.from(avatarList.children).forEach(img => {
+                if(img.dataset.avatar === selectedAvatar) {
+                    img.style.borderColor = '#475866';
+                    img.style.boxShadow = '0 0 0 3px #b8d8e3';
+                } else {
+                    img.style.borderColor = '#b8d8e3';
+                    img.style.boxShadow = 'none';
+                }
+            });
+            profileModal.style.display = 'block';
+            profileOverlay.style.display = 'block';
+            // Re-initialize icons after showing modal
+            lucide.createIcons();
+        });
+    }
+
+    // Fechar modal ao clicar fora
+    if (profileOverlay) {
+        profileOverlay.addEventListener('click', function() {
+            profileModal.style.display = 'none';
+            profileOverlay.style.display = 'none';
+        });
+    }
+
+    // Selecionar avatar
+    if (avatarList) {
+        Array.from(avatarList.children).forEach(img => {
+            img.addEventListener('click', function() {
+                selectedAvatar = this.dataset.avatar;
+                Array.from(avatarList.children).forEach(i => {
+                    i.style.borderColor = '#b8d8e3';
+                    i.style.boxShadow = 'none';
+                });
+                this.style.borderColor = '#475866';
+                this.style.boxShadow = '0 0 0 3px #b8d8e3';
+            });
+        });
+    }
+
+    // Guardar perfil
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', function() {
+            localStorage.setItem('profileName', profileNameInput.value);
+            localStorage.setItem('avatar', selectedAvatar);
+            profileModal.style.display = 'none';
+            profileOverlay.style.display = 'none';
+            // (Opcional: atualizar avatar/nome no topo do chat)
         });
     }
 }); 

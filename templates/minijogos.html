@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini-Jogos de Relaxamento</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <header style="display:flex; align-items:center; justify-content:center; position:relative; background:var(--primary-color); padding:2rem 0;">
+        <img id="logo" src="/static/images/yourmind-logo.png" alt="Logo" style="height:70px; margin-right:24px;">
+        <h1 style="flex:1; text-align:center; font-family:'Montserrat',sans-serif; font-size:2.1rem; font-weight:600; color:#fff; margin:0;">Mini-Jogos de Relaxamento</h1>
+        <button id="voltar-chat" style="position:absolute; top:50%; right:20px; transform:translateY(-50%); background:none; border:2px solid #fff; color:#fff; padding:0 4px; border-radius:12px; cursor:pointer; font-family:'Poppins',sans-serif; font-size:0.7em; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="arrow-left"></i> Voltar ao Chat
+        </button>
+    </header>
+    <main style="display:flex; flex-direction:column; align-items:center; gap:40px; margin-top:40px;">
+        <section style="background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:32px 24px; max-width:420px; width:100%; margin-bottom:24px;">
+            <h2 style="text-align:center; color:#475866; margin-bottom:18px;">Clicar nas Bolhas</h2>
+            <p style="text-align:center; color:#475866; margin-bottom:18px;">Clique nas bolhas para as fazer desaparecer e relaxar!</p>
+            <div id="bolhas-container" style="position:relative; width:320px; height:220px; background:linear-gradient(180deg,#e3f6fd 0%,#f9f9fb 100%); border-radius:14px; overflow:hidden; margin:0 auto;"></div>
+        </section>
+        <section style="background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:32px 24px; max-width:420px; width:100%; margin-bottom:24px;">
+            <h2 style="text-align:center; color:#475866; margin-bottom:18px;">Arrasta Pedras para o Lago</h2>
+            <p style="text-align:center; color:#475866; margin-bottom:18px;">Arraste as pedras para o lago e relaxe com o som da água!</p>
+            <div id="lago-container" style="position:relative; width:320px; height:120px; background:linear-gradient(180deg,#b8d8e3 60%,#e3f6fd 100%); border-radius:18px; margin:0 auto 18px auto; display:flex; align-items:flex-end; justify-content:center;"></div>
+            <div id="pedras-container" style="display:flex; gap:18px; justify-content:center; margin-top:10px;"></div>
+            <audio id="agua-som" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9e7e7d.mp3" preload="auto"></audio>
+        </section>
+        <!-- Respiração Guiada -->
+        <section style="background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:32px 24px; max-width:420px; width:100%; margin-bottom:24px;">
+            <h2 style="text-align:center; color:#475866; margin-bottom:18px;">Respiração Guiada</h2>
+            <p style="text-align:center; color:#475866; margin-bottom:18px;">Acompanhe o círculo para inspirar e expirar calmamente.</p>
+            <div id="respiracao-container" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:180px;"></div>
+        </section>
+        <!-- Desenhar na Areia -->
+        <section style="background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:32px 24px; max-width:420px; width:100%; margin-bottom:24px;">
+            <h2 style="text-align:center; color:#475866; margin-bottom:18px;">Desenhar na Areia</h2>
+            <p style="text-align:center; color:#475866; margin-bottom:18px;">Desenhe livremente nesta área e veja o desenho desaparecer suavemente.</p>
+            <canvas id="areia-canvas" width="320" height="120" style="background:linear-gradient(180deg,#f9e7c2 0%,#fffbe6 100%); border-radius:14px; display:block; margin:0 auto; cursor:crosshair;"></canvas>
+        </section>
+        <!-- Estrelas Cadentes -->
+        <section style="background:#fff; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.08); padding:32px 24px; max-width:420px; width:100%; margin-bottom:24px;">
+            <h2 style="text-align:center; color:#475866; margin-bottom:18px;">Estrelas Cadentes</h2>
+            <p style="text-align:center; color:#475866; margin-bottom:18px;">Clique no céu para criar estrelas cadentes animadas.</p>
+            <canvas id="estrelas-canvas" width="320" height="120" style="background:linear-gradient(180deg,#232946 0%,#b8d8e3 100%); border-radius:14px; display:block; margin:0 auto; cursor:pointer;"></canvas>
+        </section>
+    </main>
+    <script>
+    lucide.createIcons();
+    document.getElementById('voltar-chat').onclick = function() {
+        window.location.href = '/chat';
+    };
+    document.getElementById('logo').onclick = function() {
+        window.location.href = '/';
+    };
+    // Mini-jogo das bolhas
+    function criarBolha() {
+        const bolha = document.createElement('div');
+        const size = Math.random() * 40 + 30;
+        bolha.style.width = bolha.style.height = size + 'px';
+        bolha.style.position = 'absolute';
+        bolha.style.left = Math.random() * (320 - size) + 'px';
+        bolha.style.top = Math.random() * (220 - size) + 'px';
+        bolha.style.background = 'rgba(120,200,255,0.35)';
+        bolha.style.border = '2px solid #B8D8E3';
+        bolha.style.borderRadius = '50%';
+        bolha.style.cursor = 'pointer';
+        bolha.style.transition = 'transform 0.2s, opacity 0.2s';
+        bolha.onclick = function() {
+            bolha.style.transform = 'scale(1.3)';
+            bolha.style.opacity = '0';
+            setTimeout(() => bolha.remove(), 200);
+        };
+        document.getElementById('bolhas-container').appendChild(bolha);
+    }
+    // Cria várias bolhas ao iniciar
+    for(let i=0; i<8; i++) criarBolha();
+    // Cria bolhas novas de vez em quando
+    setInterval(() => {
+        if(document.getElementById('bolhas-container').children.length < 8) criarBolha();
+    }, 1500);
+    // Mini-jogo das pedras no lago
+    function criarPedra(id) {
+        const pedra = document.createElement('div');
+        pedra.className = 'pedra-relax';
+        pedra.draggable = true;
+        pedra.id = 'pedra-' + id;
+        pedra.style.width = '38px';
+        pedra.style.height = '38px';
+        pedra.style.background = 'linear-gradient(145deg,#b0b0b0 60%,#e0e0e0 100%)';
+        pedra.style.borderRadius = '50%';
+        pedra.style.boxShadow = '0 2px 8px rgba(0,0,0,0.10)';
+        pedra.style.cursor = 'grab';
+        pedra.style.display = 'inline-block';
+        pedra.style.transition = 'opacity 0.3s';
+        pedra.ondragstart = function(e) {
+            e.dataTransfer.setData('text/plain', pedra.id);
+        };
+        return pedra;
+    }
+    for(let i=1;i<=5;i++) document.getElementById('pedras-container').appendChild(criarPedra(i));
+    const lago = document.getElementById('lago-container');
+    lago.ondragover = function(e) { e.preventDefault(); };
+    lago.ondrop = function(e) {
+        e.preventDefault();
+        const pedraId = e.dataTransfer.getData('text/plain');
+        const pedra = document.getElementById(pedraId);
+        if(pedra) {
+            pedra.style.opacity = '0';
+            setTimeout(()=>pedra.remove(), 300);
+            // Animação de onda
+            const onda = document.createElement('div');
+            onda.style.position = 'absolute';
+            onda.style.left = (e.offsetX-20)+'px';
+            onda.style.top = (e.offsetY-20)+'px';
+            onda.style.width = '40px';
+            onda.style.height = '40px';
+            onda.style.borderRadius = '50%';
+            onda.style.border = '3px solid #fff';
+            onda.style.opacity = '0.7';
+            onda.style.pointerEvents = 'none';
+            lago.appendChild(onda);
+            setTimeout(()=>{
+                onda.style.transition = 'all 0.7s';
+                onda.style.transform = 'scale(2.2)';
+                onda.style.opacity = '0';
+            },10);
+            setTimeout(()=>onda.remove(), 800);
+            // Som de água
+            const aguaSom = document.getElementById('agua-som');
+            aguaSom.currentTime = 0;
+            aguaSom.play();
+        }
+    };
+    // Respiração Guiada
+    (function(){
+        const container = document.getElementById('respiracao-container');
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('width', '120');
+        svg.setAttribute('height', '120');
+        const circle = document.createElementNS(svgNS, 'circle');
+        circle.setAttribute('cx', '60');
+        circle.setAttribute('cy', '60');
+        circle.setAttribute('r', '30');
+        circle.setAttribute('fill', '#b8d8e3');
+        svg.appendChild(circle);
+        container.appendChild(svg);
+        const texto = document.createElement('div');
+        texto.style.textAlign = 'center';
+        texto.style.fontSize = '1.2em';
+        texto.style.color = '#475866';
+        texto.style.marginTop = '12px';
+        container.appendChild(texto);
+        let fase = 0; // 0: inspirar, 1: expirar
+        function animar(){
+            if(fase===0){
+                texto.textContent = 'Inspire...';
+                circle.animate([
+                    { r: '30' },
+                    { r: '54' }
+                ], { duration: 4000, fill: 'forwards' });
+                circle.setAttribute('r', '54');
+                setTimeout(()=>{ fase=1; animar(); }, 4000);
+            }else{
+                texto.textContent = 'Expire...';
+                circle.animate([
+                    { r: '54' },
+                    { r: '30' }
+                ], { duration: 4000, fill: 'forwards' });
+                circle.setAttribute('r', '30');
+                setTimeout(()=>{ fase=0; animar(); }, 4000);
+            }
+        }
+        animar();
+    })();
+    // Desenhar na Areia
+    (function(){
+        const canvas = document.getElementById('areia-canvas');
+        const ctx = canvas.getContext('2d');
+        let desenhar = false;
+        let ultimo = null;
+        canvas.addEventListener('mousedown', e=>{
+            desenhar = true;
+            ultimo = [e.offsetX, e.offsetY];
+        });
+        canvas.addEventListener('mouseup', ()=>{ desenhar=false; ultimo=null; });
+        canvas.addEventListener('mouseleave', ()=>{ desenhar=false; ultimo=null; });
+        canvas.addEventListener('mousemove', e=>{
+            if(desenhar && ultimo){
+                ctx.strokeStyle = 'rgba(200,180,120,0.7)';
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(ultimo[0], ultimo[1]);
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                ultimo = [e.offsetX, e.offsetY];
+            }
+        });
+        // Fade out lento
+        setInterval(()=>{
+            ctx.globalAlpha = 0.07;
+            ctx.fillStyle = '#fffbe6';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.globalAlpha = 1.0;
+        }, 120);
+    })();
+    // Estrelas Cadentes
+    (function(){
+        const canvas = document.getElementById('estrelas-canvas');
+        const ctx = canvas.getContext('2d');
+        let estrelas = [];
+        canvas.addEventListener('click', e=>{
+            estrelas.push({ x: e.offsetX, y: e.offsetY, vx: 3+Math.random()*2, vy: 2+Math.random()*2, alpha: 1 });
+        });
+        function desenhar(){
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            // Fundo gradiente
+            const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+            grad.addColorStop(0,'#232946');
+            grad.addColorStop(1,'#b8d8e3');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            // Estrelas
+            for(let i=0;i<estrelas.length;i++){
+                const est = estrelas[i];
+                ctx.save();
+                ctx.globalAlpha = est.alpha;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(est.x, est.y);
+                ctx.lineTo(est.x-18, est.y-10);
+                ctx.stroke();
+                ctx.restore();
+                est.x += est.vx;
+                est.y += est.vy;
+                est.alpha -= 0.018;
+            }
+            estrelas = estrelas.filter(e=>e.alpha>0);
+            requestAnimationFrame(desenhar);
+        }
+        desenhar();
+    })();
+    </script>
+</body>
+</html> 

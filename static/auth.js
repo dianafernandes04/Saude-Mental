@@ -84,6 +84,13 @@
         const password = document.getElementById('reg-password').value;
         const primeiroNome = document.getElementById('reg-firstname').value;
 
+        // Validação de password segura
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            alert('A palavra-passe deve ter pelo menos 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos.');
+            return;
+        }
+
         try {
             const response = await fetch('/api/registar', {
                 method: 'POST',

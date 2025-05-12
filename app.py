@@ -242,13 +242,21 @@ def chat():
     else:
         if not token:
             return jsonify({"resposta": "Token inválido!"}), 400
-        username = verificar_token(token)
-        if not username:
-            return jsonify({"resposta": "Token expirado ou inválido!"}), 401
+    username = verificar_token(token)
+    if not username:
+        return jsonify({"resposta": "Token expirado ou inválido!"}), 401
 
     try:
         contexto = [] if anonimo else obter_contexto(sessao_id)
-        mensagens = [{"role": "system", "content": "És um assistente empático. Só podes falar de saúde mental. Responde em português de Portugal."}]
+        mensagens = [{
+            "role": "system",
+            "content": (
+                "És um assistente de saúde mental. "
+                "Só podes responder a perguntas relacionadas com saúde mental, emoções, bem-estar psicológico, ansiedade, depressão, stress, autocuidado, motivação, autoestima, relações interpessoais, técnicas de relaxamento, etc. "
+                "Se a pergunta não for sobre saúde mental, responde apenas: 'Desculpa, só posso responder a questões relacionadas com saúde mental.' "
+                "Responde sempre em português de Portugal."
+            )
+        }]
 
         for m, r in contexto:
             mensagens.append({"role": "user", "content": m})
@@ -328,7 +336,12 @@ def obter_mensagens(sessao_id):
         ''', (sessao_id,))
         linhas = cursor.fetchall()
     return jsonify([
-        {'mensagem': l[0], 'resposta': l[1], 'timestamp': l[2]} for l in linhas
+        {
+            'mensagem': l[0],
+            'resposta': l[1],
+            'timestamp': l[2],
+            'emocao': analisar_emocao(l[0])
+        } for l in linhas
     ])
 
 @app.route('/api/historico/<sessao_id>', methods=['DELETE'])
@@ -364,6 +377,10 @@ def login_page():
 @app.route('/chat')
 def chat_page():
     return render_template('chat.html')
+
+@app.route('/minijogos')
+def minijogos_page():
+    return render_template('minijogos.html')
 
 @app.route('/static/<path:path>')
 def serve_static(path):
