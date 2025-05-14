@@ -27,21 +27,22 @@ def criar_base_dados():
     with sqlite3.connect('conversas.db') as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS mensagens (
+            CREATE TABLE IF NOT EXISTS utilizadores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sessao_id TEXT NOT NULL,
-                utilizador TEXT NOT NULL,
-                mensagem TEXT NOT NULL,
-                resposta TEXT NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                primeiro_nome TEXT NOT NULL
             )
         ''')
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS utilizadores (
+            CREATE TABLE IF NOT EXISTS mensagens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                primeiro_nome TEXT NOT NULL
+                utilizador TEXT NOT NULL,
+                sessao_id TEXT NOT NULL,
+                mensagem TEXT NOT NULL,
+                resposta TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                emocao TEXT
             )
         ''')
         conn.commit()
@@ -97,12 +98,13 @@ def verificar_token(token):
         return None
 
 def guardar_conversa(utilizador, sessao_id, mensagem, resposta):
+    emocao = analisar_emocao(mensagem)
     with sqlite3.connect('conversas.db') as conn:
         cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO mensagens (sessao_id, utilizador, mensagem, resposta)
-            VALUES (?, ?, ?, ?)
-        ''', (sessao_id, utilizador, mensagem, resposta))
+        cursor.execute(
+            'INSERT INTO mensagens (utilizador, sessao_id, mensagem, resposta, emocao) VALUES (?, ?, ?, ?, ?)',
+            (utilizador, sessao_id, mensagem, resposta, emocao)
+        )
         conn.commit()
 
 def obter_primeiro_nome(username):
@@ -407,9 +409,9 @@ def get_emocoes():
         conn = sqlite3.connect('conversas.db')
         cursor = conn.cursor()
 
-        # Buscar todas as mensagens do mês/ano especificado
+        # Buscar todas as mensagens do mês/ano especificado com suas emoções
         cursor.execute('''
-            SELECT m.timestamp, m.mensagem
+            SELECT m.timestamp, m.emocao
             FROM mensagens m
             WHERE m.utilizador = ? 
             AND strftime('%m', datetime(m.timestamp)) = ?
@@ -420,15 +422,13 @@ def get_emocoes():
         mensagens = cursor.fetchall()
         conn.close()
 
-        # Agrupar emoções por dia e calcular a média
+        # Agrupar emoções por dia
         emocoes_por_dia = {}
-        for timestamp, mensagem in mensagens:
+        for timestamp, emocao in mensagens:
             data = timestamp.split(' ')[0]  # Pega só a data (YYYY-MM-DD)
             if data not in emocoes_por_dia:
                 emocoes_por_dia[data] = {'contagem': {}, 'total': 0}
             
-            # Analisar a emoção da mensagem
-            emocao = analisar_emocao(mensagem)
             if emocao:
                 emocoes_por_dia[data]['contagem'][emocao] = emocoes_por_dia[data]['contagem'].get(emocao, 0) + 1
                 emocoes_por_dia[data]['total'] += 1
@@ -470,7 +470,7 @@ def get_conversas(username):
         with sqlite3.connect('conversas.db') as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT mensagem, resposta, timestamp, sessao_id
+                SELECT mensagem, resposta, timestamp, sessao_id, emocao
                 FROM mensagens
                 WHERE utilizador = ?
                 AND timestamp BETWEEN ? AND ?
@@ -481,8 +481,7 @@ def get_conversas(username):
             
         # Converter para JSON
         conversas_json = []
-        for mensagem, resposta, timestamp, sessao_id in conversas:
-            emocao = analisar_emocao(mensagem)
+        for mensagem, resposta, timestamp, sessao_id, emocao in conversas:
             conversas_json.append({
                 'data': timestamp,
                 'texto': mensagem,
