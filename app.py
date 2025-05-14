@@ -45,6 +45,46 @@ def criar_base_dados():
                 emocao TEXT
             )
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS conquistas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                icone TEXT NOT NULL,
+                tipo TEXT NOT NULL,
+                valor_meta INTEGER NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS conquistas_utilizador (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                utilizador TEXT NOT NULL,
+                conquista_id INTEGER NOT NULL,
+                data_obtida DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (conquista_id) REFERENCES conquistas(id),
+                UNIQUE(utilizador, conquista_id)
+            )
+        ''')
+        
+        # Inserir conquistas iniciais se não existirem
+        cursor.execute('SELECT COUNT(*) FROM conquistas')
+        if cursor.fetchone()[0] == 0:
+            conquistas_iniciais = [
+                ('Primeira Conversa', 'Iniciou sua primeira conversa', '💬', 'conversas', 1),
+                ('Conversador Iniciante', 'Completou 10 conversas', '🗣️', 'conversas', 10),
+                ('Conversador Experiente', 'Completou 50 conversas', '👑', 'conversas', 50),
+                ('Explorador de Emoções', 'Experimentou 5 emoções diferentes', '🎭', 'emocoes_diferentes', 5),
+                ('Mestre das Emoções', 'Experimentou todas as emoções', '🌈', 'todas_emocoes', 7),
+                ('Dia Produtivo', 'Conversou em 5 dias diferentes', '📅', 'dias_diferentes', 5),
+                ('Usuário Dedicado', 'Conversou por 30 dias', '🌟', 'dias_diferentes', 30),
+                ('Buscador de Ajuda', 'Recebeu 10 recomendações', '💡', 'recomendacoes', 10),
+                ('Sempre Positivo', 'Manteve 5 dias de emoções positivas', '😊', 'dias_positivos', 5),
+                ('Superação', 'Mudou de emoção negativa para positiva', '🌅', 'mudanca_positiva', 1)
+            ]
+            cursor.executemany(
+                'INSERT INTO conquistas (nome, descricao, icone, tipo, valor_meta) VALUES (?, ?, ?, ?, ?)',
+                conquistas_iniciais
+            )
         conn.commit()
 
 criar_base_dados()
@@ -177,6 +217,91 @@ def recomendar_suporte(nivel):
     else:
         return {"mensagem": "🌤️ Continua atento à tua saúde mental."}
 
+def verificar_conquistas(username):
+    """Verifica e atribui novas conquistas para o usuário"""
+    try:
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            novas_conquistas = []
+
+            # Buscar todas as conquistas não obtidas pelo usuário
+            cursor.execute('''
+                SELECT c.* FROM conquistas c
+                LEFT JOIN conquistas_utilizador cu 
+                ON c.id = cu.conquista_id AND cu.utilizador = ?
+                WHERE cu.id IS NULL
+            ''', (username,))
+            conquistas_pendentes = cursor.fetchall()
+
+            for conquista in conquistas_pendentes:
+                conquista_id, nome, descricao, icone, tipo, valor_meta = conquista
+
+                # Verificar cada tipo de conquista
+                if tipo == 'conversas':
+                    cursor.execute('''
+                        SELECT COUNT(DISTINCT sessao_id) 
+                        FROM mensagens 
+                        WHERE utilizador = ?
+                    ''', (username,))
+                    total_conversas = cursor.fetchone()[0]
+                    if total_conversas >= valor_meta:
+                        novas_conquistas.append(conquista)
+
+                elif tipo == 'emocoes_diferentes':
+                    cursor.execute('''
+                        SELECT COUNT(DISTINCT emocao) 
+                        FROM mensagens 
+                        WHERE utilizador = ? AND emocao IS NOT NULL
+                    ''', (username,))
+                    total_emocoes = cursor.fetchone()[0]
+                    if total_emocoes >= valor_meta:
+                        novas_conquistas.append(conquista)
+
+                elif tipo == 'todas_emocoes':
+                    cursor.execute('''
+                        SELECT COUNT(DISTINCT emocao) 
+                        FROM mensagens 
+                        WHERE utilizador = ? AND emocao IN 
+                        ('alegria', 'tristeza', 'raiva', 'medo', 'ansiedade', 'confusao', 'neutra')
+                    ''', (username,))
+                    total_emocoes = cursor.fetchone()[0]
+                    if total_emocoes >= valor_meta:
+                        novas_conquistas.append(conquista)
+
+                elif tipo == 'dias_diferentes':
+                    cursor.execute('''
+                        SELECT COUNT(DISTINCT date(timestamp))
+                        FROM mensagens
+                        WHERE utilizador = ?
+                    ''', (username,))
+                    total_dias = cursor.fetchone()[0]
+                    if total_dias >= valor_meta:
+                        novas_conquistas.append(conquista)
+
+                elif tipo == 'dias_positivos':
+                    cursor.execute('''
+                        SELECT COUNT(DISTINCT date(timestamp))
+                        FROM mensagens
+                        WHERE utilizador = ? AND emocao = 'alegria'
+                    ''', (username,))
+                    dias_positivos = cursor.fetchone()[0]
+                    if dias_positivos >= valor_meta:
+                        novas_conquistas.append(conquista)
+
+            # Registrar novas conquistas obtidas
+            for conquista in novas_conquistas:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO conquistas_utilizador (utilizador, conquista_id)
+                    VALUES (?, ?)
+                ''', (username, conquista[0]))
+            
+            conn.commit()
+            return novas_conquistas
+
+    except Exception as e:
+        print(f"Erro ao verificar conquistas: {e}")
+        return []
+
 # ========== DECORADORES ==========
 def token_required(f):
     @wraps(f)
@@ -304,12 +429,21 @@ def chat():
 
         if not anonimo:
             guardar_conversa(username, sessao_id, mensagem_usuario, resposta)
-
+            # Verificar novas conquistas
+            novas_conquistas = verificar_conquistas(username)
+            
         return jsonify({
             "resposta": resposta,
             "nivel": nivel,
             "emocao": emocao,
-            "recomendacoes": recomendacoes
+            "recomendacoes": recomendacoes,
+            "novas_conquistas": [
+                {
+                    "nome": c[1],
+                    "descricao": c[2],
+                    "icone": c[3]
+                } for c in novas_conquistas
+            ] if not anonimo else []
         })
     except Exception as e:
         return jsonify({"resposta": f"Erro: {str(e)}"}), 500
@@ -629,6 +763,51 @@ def delete_account(username):
     except Exception as e:
         print(f"Erro ao apagar conta: {e}")
         return jsonify({'erro': 'Erro ao apagar conta'}), 500
+
+@app.route('/api/conquistas', methods=['GET'])
+@token_required
+def get_conquistas(username):
+    try:
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            
+            # Buscar todas as conquistas e marcar as que o usuário já tem
+            cursor.execute('''
+                SELECT 
+                    c.id,
+                    c.nome,
+                    c.descricao,
+                    c.icone,
+                    c.tipo,
+                    c.valor_meta,
+                    CASE WHEN cu.id IS NOT NULL 
+                        THEN 1 
+                        ELSE 0 
+                    END as obtida,
+                    cu.data_obtida
+                FROM conquistas c
+                LEFT JOIN conquistas_utilizador cu 
+                    ON c.id = cu.conquista_id 
+                    AND cu.utilizador = ?
+                ORDER BY c.id
+            ''', (username,))
+            
+            conquistas = cursor.fetchall()
+            
+            return jsonify([{
+                'id': c[0],
+                'nome': c[1],
+                'descricao': c[2],
+                'icone': c[3],
+                'tipo': c[4],
+                'valor_meta': c[5],
+                'obtida': bool(c[6]),
+                'data_obtida': c[7]
+            } for c in conquistas])
+            
+    except Exception as e:
+        print(f"Erro ao buscar conquistas: {e}")
+        return jsonify({'erro': 'Erro ao buscar conquistas'}), 500
 
 # ========== START ==========
 if __name__ == '__main__':

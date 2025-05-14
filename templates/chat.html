@@ -41,23 +41,6 @@
                 Calendário de Emoções
             </div>
         </div>
-        <!-- Modal de Perfil -->
-        <div id="profile-modal-overlay"></div>
-        <div id="profile-modal">
-            <h2>Perfil do Utilizador</h2>
-            <label for="profile-name">Nome:</label>
-            <input id="profile-name" type="text">
-            <div style="margin-bottom:16px;">Escolhe o teu avatar:</div>
-            <div id="avatar-list">
-                <img src="static/avatars/avatar1.png" class="avatar-option" data-avatar="avatar1.png">
-                <img src="static/avatars/avatar2.png" class="avatar-option" data-avatar="avatar2.png">
-                <img src="static/avatars/avatar3.png" class="avatar-option" data-avatar="avatar3.png">
-                <img src="static/avatars/avatar4.png" class="avatar-option" data-avatar="avatar4.png">
-                <img src="static/avatars/avatar5.png" class="avatar-option" data-avatar="avatar5.png">
-                <img src="static/avatars/avatar6.png" class="avatar-option" data-avatar="avatar6.png">
-            </div>
-            <button id="save-profile-btn" class="button-auth">Guardar</button>
-        </div>
     </header>
 
     <main>
@@ -208,6 +191,96 @@
     document.getElementById('profile-btn').onclick = function() {
         window.location.href = '/profile';
     };
+
+    // Add this after the chat message handling in the sendMessage function
+
+    if (data.novas_conquistas && data.novas_conquistas.length > 0) {
+        data.novas_conquistas.forEach(conquista => {
+            // Mostrar notificação na página atual
+            const notification = document.createElement('div');
+            notification.className = 'achievement-notification';
+            notification.innerHTML = `
+                <div class="achievement-icon">${conquista.icone}</div>
+                <div class="achievement-content">
+                    <div class="achievement-title">Nova Conquista!</div>
+                    <div class="achievement-name">${conquista.nome}</div>
+                    <div class="achievement-description">${conquista.descricao}</div>
+                </div>
+            `;
+            document.body.appendChild(notification);
+
+            // Animar a entrada
+            setTimeout(() => notification.classList.add('show'), 100);
+
+            // Remover após 5 segundos
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 5000);
+
+            // Notificar a página de perfil se estiver aberta
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'achievement',
+                    achievement: conquista
+                }, '*');
+            }
+        });
+    }
     </script>
+
+    <!-- Add this CSS to the existing styles -->
+    <style>
+    .achievement-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transform: translateX(120%);
+        transition: transform 0.3s ease-out;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 300px;
+    }
+
+    .achievement-notification.show {
+        transform: translateX(0);
+    }
+
+    .achievement-icon {
+        font-size: 2rem;
+    }
+
+    .achievement-content {
+        flex: 1;
+    }
+
+    .achievement-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .achievement-name {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .achievement-description {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .achievement-notification {
+            background: var(--primary-dark);
+        }
+    }
+    </style>
 </body>
 </html> 

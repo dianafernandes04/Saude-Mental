@@ -16,12 +16,41 @@
     <link rel="stylesheet" href="static/style.css">
     <style>
         .profile-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 2rem auto;
             padding: 2rem;
             background: var(--bg-color);
             border-radius: 16px;
             box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .profile-section {
@@ -105,6 +134,129 @@
             color: var(--primary-color);
         }
 
+        /* Estilos das Conquistas */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .achievement-card {
+            background: var(--bg-color);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .achievement-card.obtained {
+            border-color: var(--primary-color);
+            background: linear-gradient(45deg, var(--bg-color), var(--primary-color-light));
+        }
+
+        .achievement-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .achievement-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+
+        .achievement-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .achievement-date {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .achievement-card.obtained::before {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary-color);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        /* Notificação de Conquista */
+        #achievement-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        #achievement-notification.show {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .notification-icon {
+            font-size: 2rem;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .notification-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .achievement-card {
+                background: var(--container-dark);
+            }
+
+            .achievement-card.obtained {
+                background: linear-gradient(45deg, var(--container-dark), var(--primary-dark));
+            }
+        }
+
+        /* Estilos do Modal de Confirmação */
         #deleteConfirmModal {
             display: none;
             position: fixed;
@@ -112,103 +264,154 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background-color: rgba(0, 0, 0, 0.75);
             z-index: 1000;
-            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
         }
 
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #ffffff;
-            padding: 2rem;
-            border-radius: 12px;
+        #deleteConfirmModal .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            max-width: 450px;
             width: 90%;
-            max-width: 400px;
             text-align: center;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            animation: modalAppear 0.3s ease-out;
         }
 
-        .modal-content h3 {
-            color: #dc3545;
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #deleteConfirmModal h3 {
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
             font-size: 1.5rem;
-            margin-bottom: 1rem;
             font-weight: 600;
         }
 
-        .modal-content p {
-            color: #4a5568;
-            margin-bottom: 1.5rem;
+        #deleteConfirmModal p {
+            margin-bottom: 2rem;
+            color: #5a6c7d;
+            font-size: 1.1rem;
             line-height: 1.5;
         }
 
         .modal-buttons {
             display: flex;
             gap: 1rem;
-            margin-top: 1.5rem;
             justify-content: center;
         }
 
         .modal-btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 2rem;
             border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
+            border-radius: 10px;
             font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
             transition: all 0.2s ease;
+            min-width: 120px;
         }
 
         .modal-btn-cancel {
-            background: #f8f9fa;
+            background: #f1f3f5;
             color: #4a5568;
             border: 1px solid #e2e8f0;
-        }
-
-        .modal-btn-cancel:hover {
-            background: #e2e8f0;
         }
 
         .modal-btn-confirm {
             background: #dc3545;
             color: white;
+            box-shadow: 0 4px 6px rgba(220, 53, 69, 0.1);
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
         }
 
         .modal-btn-confirm:hover {
             background: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(220, 53, 69, 0.2);
+        }
+
+        /* Estilos para os requisitos da senha */
+        .password-requirements {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: left;
+        }
+
+        .password-requirements ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0.5rem 0;
+        }
+
+        .password-requirements li {
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .password-requirements li::before {
+            content: "•";
+            color: #dc3545;
+        }
+
+        .password-requirements li.valid::before {
+            content: "✓";
+            color: #28a745;
+        }
+
+        .requirement-met {
+            color: #28a745;
+        }
+
+        .requirement-not-met {
+            color: #dc3545;
         }
 
         @media (prefers-color-scheme: dark) {
-            .modal-content {
+            #deleteConfirmModal .modal-content {
                 background: #2d3748;
+                border-color: rgba(255, 255, 255, 0.1);
             }
 
-            .modal-content h3 {
-                color: #fc8181;
-            }
-
-            .modal-content p {
+            #deleteConfirmModal h3 {
                 color: #e2e8f0;
+            }
+
+            #deleteConfirmModal p {
+                color: #a0aec0;
             }
 
             .modal-btn-cancel {
                 background: #4a5568;
                 color: #e2e8f0;
-                border: 1px solid #4a5568;
+                border-color: #2d3748;
             }
 
             .modal-btn-cancel:hover {
                 background: #2d3748;
             }
 
-            .modal-btn-confirm {
-                background: #fc8181;
-            }
-
-            .modal-btn-confirm:hover {
-                background: #e53e3e;
+            .password-requirements {
+                color: #a0aec0;
             }
         }
     </style>
@@ -231,42 +434,58 @@
                 Voltar ao Chat
             </a>
 
-            <div class="profile-section">
-                <h2>Informações Pessoais</h2>
-                <div class="form-group">
-                    <label for="primeiro-nome">Primeiro Nome</label>
-                    <input type="text" id="primeiro-nome" name="primeiro-nome">
-                </div>
-                <div class="form-group">
-                    <label for="username">Nome de Utilizador</label>
-                    <input type="text" id="username" name="username">
-                </div>
-                <button class="btn btn-primary" id="save-info-btn">Guardar Informações</button>
+            <div class="tabs">
+                <div class="tab active" data-tab="profile">Perfil</div>
+                <div class="tab" data-tab="achievements">Conquistas</div>
             </div>
 
-            <div class="profile-section">
-                <h2>Alterar Palavra-passe</h2>
-                <div class="form-group">
-                    <label for="current-password">Palavra-passe Atual</label>
-                    <input type="password" id="current-password" name="current-password">
+            <div id="profile-tab" class="tab-content active">
+                <div class="profile-section">
+                    <h2>Informações Pessoais</h2>
+                    <div class="form-group">
+                        <label for="primeiro-nome">Primeiro Nome</label>
+                        <input type="text" id="primeiro-nome" name="primeiro-nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Nome de Utilizador</label>
+                        <input type="text" id="username" name="username">
+                    </div>
+                    <button class="btn btn-primary" id="save-info-btn">Guardar Informações</button>
                 </div>
-                <div class="form-group">
-                    <label for="new-password">Nova Palavra-passe</label>
-                    <input type="password" id="new-password" name="new-password">
+
+                <div class="profile-section">
+                    <h2>Alterar Palavra-passe</h2>
+                    <div class="form-group">
+                        <label for="current-password">Palavra-passe Atual</label>
+                        <input type="password" id="current-password" name="current-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">Nova Palavra-passe</label>
+                        <input type="password" id="new-password" name="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Confirmar Nova Palavra-passe</label>
+                        <input type="password" id="confirm-password" name="confirm-password">
+                    </div>
+                    <button class="btn btn-primary" id="change-password-btn">Alterar Palavra-passe</button>
                 </div>
-                <div class="form-group">
-                    <label for="confirm-password">Confirmar Nova Palavra-passe</label>
-                    <input type="password" id="confirm-password" name="confirm-password">
+
+                <div class="profile-section">
+                    <h2>Apagar Conta</h2>
+                    <p style="margin-bottom: 1rem; color: var(--text-color);">
+                        Esta ação é irreversível. Todos os seus dados serão permanentemente apagados.
+                    </p>
+                    <button class="btn btn-danger" id="delete-account-btn">Apagar Conta</button>
                 </div>
-                <button class="btn btn-primary" id="change-password-btn">Alterar Palavra-passe</button>
             </div>
 
-            <div class="profile-section">
-                <h2>Apagar Conta</h2>
-                <p style="margin-bottom: 1rem; color: var(--text-color);">
-                    Esta ação é irreversível. Todos os seus dados serão permanentemente apagados.
-                </p>
-                <button class="btn btn-danger" id="delete-account-btn">Apagar Conta</button>
+            <div id="achievements-tab" class="tab-content">
+                <div class="profile-section">
+                    <h2>Minhas Conquistas</h2>
+                    <div class="achievements-grid" id="achievements-container">
+                        <!-- As conquistas serão inseridas aqui dinamicamente -->
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -283,6 +502,15 @@
         </div>
     </div>
 
+    <!-- Achievement Notification -->
+    <div id="achievement-notification">
+        <div class="notification-icon"></div>
+        <div class="notification-content">
+            <div class="notification-title"></div>
+            <div class="notification-description"></div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <script src="static/common.js"></script>
     <script>
@@ -294,6 +522,21 @@
             window.location.href = '/';
         };
 
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+
+                if (tab.dataset.tab === 'achievements') {
+                    loadAchievements();
+                }
+            });
+        });
+
         // Get DOM elements
         const saveInfoBtn = document.getElementById('save-info-btn');
         const changePasswordBtn = document.getElementById('change-password-btn');
@@ -301,6 +544,9 @@
         const deleteConfirmModal = document.getElementById('deleteConfirmModal');
         const cancelDeleteBtn = document.getElementById('cancelDelete');
         const confirmDeleteBtn = document.getElementById('confirmDelete');
+        const currentPassword = document.getElementById('current-password');
+        const newPassword = document.getElementById('new-password');
+        const confirmPassword = document.getElementById('confirm-password');
 
         // Load user info
         async function loadUserInfo() {
@@ -320,6 +566,50 @@
             } catch (error) {
                 console.error('Error loading user info:', error);
             }
+        }
+
+        // Load achievements
+        async function loadAchievements() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/conquistas', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const conquistas = await response.json();
+                    const container = document.getElementById('achievements-container');
+                    container.innerHTML = conquistas.map(conquista => `
+                        <div class="achievement-card ${conquista.obtida ? 'obtained' : ''}">
+                            <div class="achievement-icon">${conquista.icone}</div>
+                            <div class="achievement-name">${conquista.nome}</div>
+                            <div class="achievement-description">${conquista.descricao}</div>
+                            ${conquista.obtida ? `
+                                <div class="achievement-date">
+                                    Obtida em ${new Date(conquista.data_obtida).toLocaleDateString('pt-BR')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading achievements:', error);
+            }
+        }
+
+        // Show achievement notification
+        function showAchievementNotification(achievement) {
+            const notification = document.getElementById('achievement-notification');
+            notification.querySelector('.notification-icon').textContent = achievement.icone;
+            notification.querySelector('.notification-title').textContent = 'Nova Conquista!';
+            notification.querySelector('.notification-description').textContent = `${achievement.nome} - ${achievement.descricao}`;
+            
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
         }
 
         // Save user info
@@ -353,14 +643,24 @@
             }
         });
 
-        // Change password
+        // Change password functionality
         changePasswordBtn.addEventListener('click', async () => {
-            const currentPassword = document.getElementById('current-password').value;
-            const newPassword = document.getElementById('new-password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+            const currentPasswordValue = currentPassword.value;
+            const newPasswordValue = newPassword.value;
+            const confirmPasswordValue = confirmPassword.value;
 
-            if (newPassword !== confirmPassword) {
+            if (!currentPasswordValue || !newPasswordValue || !confirmPasswordValue) {
+                alert('Por favor, preencha todos os campos.');
+                return;
+            }
+
+            if (newPasswordValue !== confirmPasswordValue) {
                 alert('As novas palavras-passe não coincidem.');
+                return;
+            }
+
+            if (!validatePassword(newPasswordValue)) {
+                alert('A nova palavra-passe não atende aos requisitos de segurança.');
                 return;
             }
 
@@ -373,16 +673,18 @@
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword
+                        current_password: currentPasswordValue,
+                        new_password: newPasswordValue
                     })
                 });
 
                 if (response.ok) {
                     alert('Palavra-passe alterada com sucesso!');
-                    document.getElementById('current-password').value = '';
-                    document.getElementById('new-password').value = '';
-                    document.getElementById('confirm-password').value = '';
+                    currentPassword.value = '';
+                    newPassword.value = '';
+                    confirmPassword.value = '';
+                    // Resetar os indicadores de requisitos
+                    document.querySelectorAll('.password-requirements li').forEach(li => li.classList.remove('valid'));
                 } else {
                     const data = await response.json();
                     alert(data.erro || 'Erro ao alterar a palavra-passe.');
@@ -393,9 +695,48 @@
             }
         });
 
+        // Adicionar div de requisitos após o campo de nova senha
+        const requirementsDiv = document.createElement('div');
+        requirementsDiv.className = 'password-requirements';
+        requirementsDiv.innerHTML = `
+            <ul>
+                <li id="length-req">Mínimo de 8 caracteres</li>
+                <li id="uppercase-req">Pelo menos 1 letra maiúscula</li>
+                <li id="lowercase-req">Pelo menos 1 letra minúscula</li>
+                <li id="number-req">Pelo menos 1 número</li>
+                <li id="special-req">Pelo menos 1 caractere especial (!@#$%^&*)</li>
+            </ul>
+        `;
+        newPassword.parentNode.insertBefore(requirementsDiv, newPassword.nextSibling);
+
+        // Função para validar a senha
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /[0-9]/.test(password),
+                special: /[!@#$%^&*]/.test(password)
+            };
+
+            // Atualizar visual dos requisitos
+            document.getElementById('length-req').classList.toggle('valid', requirements.length);
+            document.getElementById('uppercase-req').classList.toggle('valid', requirements.uppercase);
+            document.getElementById('lowercase-req').classList.toggle('valid', requirements.lowercase);
+            document.getElementById('number-req').classList.toggle('valid', requirements.number);
+            document.getElementById('special-req').classList.toggle('valid', requirements.special);
+
+            return Object.values(requirements).every(req => req === true);
+        }
+
+        // Evento para validar senha em tempo real
+        newPassword.addEventListener('input', function() {
+            validatePassword(this.value);
+        });
+
         // Delete account modal
         deleteAccountBtn.addEventListener('click', () => {
-            deleteConfirmModal.style.display = 'block';
+            deleteConfirmModal.style.display = 'flex';
         });
 
         cancelDeleteBtn.addEventListener('click', () => {
@@ -422,18 +763,34 @@
             } catch (error) {
                 console.error('Error deleting account:', error);
                 alert('Erro ao apagar a conta.');
-            }
-        });
-
-        // Close modal when clicking outside
-        window.addEventListener('click', (event) => {
-            if (event.target === deleteConfirmModal) {
+            } finally {
                 deleteConfirmModal.style.display = 'none';
             }
         });
 
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target === deleteConfirmModal) {
+                deleteConfirmModal.style.display = 'none';
+            }
+        };
+
         // Load user info when page loads
         loadUserInfo();
+
+        // Check for new achievements periodically (every 30 seconds)
+        setInterval(async () => {
+            if (document.querySelector('.tab[data-tab="achievements"]').classList.contains('active')) {
+                await loadAchievements();
+            }
+        }, 30000);
+
+        // Listen for achievement notifications from the chat
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'achievement' && event.data.achievement) {
+                showAchievementNotification(event.data.achievement);
+            }
+        });
     </script>
 </body>
 </html> 

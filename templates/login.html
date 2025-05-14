@@ -14,6 +14,53 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="static/style.css">
+    <style>
+        /* Estilos para os requisitos da senha */
+        .password-requirements {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: left;
+            padding: 0 1rem;
+        }
+
+        .password-requirements ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0.5rem 0;
+        }
+
+        .password-requirements li {
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .password-requirements li::before {
+            content: "•";
+            color: #dc3545;
+        }
+
+        .password-requirements li.valid::before {
+            content: "✓";
+            color: #28a745;
+        }
+
+        .requirement-met {
+            color: #28a745;
+        }
+
+        .requirement-not-met {
+            color: #dc3545;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .password-requirements {
+                color: #a0aec0;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -43,6 +90,15 @@
                 <input type="text" id="reg-username" placeholder="Username" required>
                 <input type="text" id="reg-firstname" placeholder="Primeiro Nome" required>
                 <input type="password" id="reg-password" placeholder="Password" required>
+                <div class="password-requirements">
+                    <ul>
+                        <li id="length-req">Mínimo de 8 caracteres</li>
+                        <li id="uppercase-req">Pelo menos 1 letra maiúscula</li>
+                        <li id="lowercase-req">Pelo menos 1 letra minúscula</li>
+                        <li id="number-req">Pelo menos 1 número</li>
+                        <li id="special-req">Pelo menos 1 caractere especial (!@#$%^&*)</li>
+                    </ul>
+                </div>
                 <button type="submit" class="button-auth">Registar</button>
             </form>
             <p class="switch-form">Já tens conta? <a href="#" id="show-login">Faz login</a></p>
@@ -56,6 +112,71 @@
     document.getElementById('logo').onclick = function() {
         window.location.href = '/';
     };
+
+    // Função para validar a senha
+    function validatePassword(password) {
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*]/.test(password)
+        };
+
+        // Atualizar visual dos requisitos
+        document.getElementById('length-req').classList.toggle('valid', requirements.length);
+        document.getElementById('uppercase-req').classList.toggle('valid', requirements.uppercase);
+        document.getElementById('lowercase-req').classList.toggle('valid', requirements.lowercase);
+        document.getElementById('number-req').classList.toggle('valid', requirements.number);
+        document.getElementById('special-req').classList.toggle('valid', requirements.special);
+
+        return Object.values(requirements).every(req => req === true);
+    }
+
+    // Evento para validar senha em tempo real
+    document.getElementById('reg-password').addEventListener('input', function() {
+        validatePassword(this.value);
+    });
+
+    // Validar formulário antes de enviar
+    document.getElementById('register-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const password = document.getElementById('reg-password').value;
+        
+        if (!validatePassword(password)) {
+            alert('A palavra-passe não atende aos requisitos de segurança.');
+            return;
+        }
+
+        // Continuar com o envio do formulário
+        const username = document.getElementById('reg-username').value;
+        const firstName = document.getElementById('reg-firstname').value;
+
+        fetch('/api/registar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password,
+                primeiro_nome: firstName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.mensagem === 'Registo concluído!') {
+                alert('Registo concluído com sucesso!');
+                document.getElementById('show-login').click();
+            } else {
+                alert(data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao registar. Por favor, tente novamente.');
+        });
+    });
     </script>
 </body>
 </html> 
