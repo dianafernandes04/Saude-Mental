@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfil - Sistema de Apoio à Saúde Mental</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/style.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--bg-color);
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-section {
+            margin-bottom: 2rem;
+        }
+
+        .profile-section h2 {
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            color: var(--text-color);
+            text-decoration: none;
+            margin-bottom: 1rem;
+        }
+
+        .back-button:hover {
+            color: var(--primary-color);
+        }
+
+        #deleteConfirmModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h3 {
+            color: #dc3545;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .modal-content p {
+            color: #4a5568;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn-cancel {
+            background: #f8f9fa;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .modal-btn-confirm {
+            background: #dc3545;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #c82333;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .modal-content {
+                background: #2d3748;
+            }
+
+            .modal-content h3 {
+                color: #fc8181;
+            }
+
+            .modal-content p {
+                color: #e2e8f0;
+            }
+
+            .modal-btn-cancel {
+                background: #4a5568;
+                color: #e2e8f0;
+                border: 1px solid #4a5568;
+            }
+
+            .modal-btn-cancel:hover {
+                background: #2d3748;
+            }
+
+            .modal-btn-confirm {
+                background: #fc8181;
+            }
+
+            .modal-btn-confirm:hover {
+                background: #e53e3e;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img id="logo" src="static/images/yourmind-logo.png" alt="Logo">
+        <h1>Sistema de Apoio à Saúde Mental</h1>
+        <div class="header-actions">
+            <button id="theme-toggle">
+                <i data-lucide="moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="profile-container">
+            <a href="/chat" class="back-button">
+                <i data-lucide="arrow-left"></i>
+                Voltar ao Chat
+            </a>
+
+            <div class="profile-section">
+                <h2>Informações Pessoais</h2>
+                <div class="form-group">
+                    <label for="primeiro-nome">Primeiro Nome</label>
+                    <input type="text" id="primeiro-nome" name="primeiro-nome">
+                </div>
+                <div class="form-group">
+                    <label for="username">Nome de Utilizador</label>
+                    <input type="text" id="username" name="username">
+                </div>
+                <button class="btn btn-primary" id="save-info-btn">Guardar Informações</button>
+            </div>
+
+            <div class="profile-section">
+                <h2>Alterar Palavra-passe</h2>
+                <div class="form-group">
+                    <label for="current-password">Palavra-passe Atual</label>
+                    <input type="password" id="current-password" name="current-password">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">Nova Palavra-passe</label>
+                    <input type="password" id="new-password" name="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirmar Nova Palavra-passe</label>
+                    <input type="password" id="confirm-password" name="confirm-password">
+                </div>
+                <button class="btn btn-primary" id="change-password-btn">Alterar Palavra-passe</button>
+            </div>
+
+            <div class="profile-section">
+                <h2>Apagar Conta</h2>
+                <p style="margin-bottom: 1rem; color: var(--text-color);">
+                    Esta ação é irreversível. Todos os seus dados serão permanentemente apagados.
+                </p>
+                <button class="btn btn-danger" id="delete-account-btn">Apagar Conta</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal">
+        <div class="modal-content">
+            <h3>Confirmar Eliminação</h3>
+            <p>Tens a certeza que queres apagar a tua conta? Esta ação não pode ser desfeita.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="cancelDelete">Cancelar</button>
+                <button class="modal-btn modal-btn-confirm" id="confirmDelete">Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="static/common.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Logo click handler
+        document.getElementById('logo').onclick = function() {
+            window.location.href = '/';
+        };
+
+        // Get DOM elements
+        const saveInfoBtn = document.getElementById('save-info-btn');
+        const changePasswordBtn = document.getElementById('change-password-btn');
+        const deleteAccountBtn = document.getElementById('delete-account-btn');
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('primeiro-nome').value = data.primeiro_nome;
+                    document.getElementById('username').value = data.username;
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        // Save user info
+        saveInfoBtn.addEventListener('click', async () => {
+            const primeiroNome = document.getElementById('primeiro-nome').value;
+            const username = document.getElementById('username').value;
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        primeiro_nome: primeiroNome,
+                        username: username
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Informações atualizadas com sucesso!');
+                } else {
+                    const data = await response.json();
+                    alert(data.erro || 'Erro ao atualizar informações.');
+                }
+            } catch (error) {
+                console.error('Error updating user info:', error);
+                alert('Erro ao atualizar informações.');
+            }
+        });
+
+        // Change password
+        changePasswordBtn.addEventListener('click', async () => {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (newPassword !== confirmPassword) {
+                alert('As novas palavras-passe não coincidem.');
+                return;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile/password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Palavra-passe alterada com sucesso!');
+                    document.getElementById('current-password').value = '';
+                    document.getElementById('new-password').value = '';
+                    document.getElementById('confirm-password').value = '';
+                } else {
+                    const data = await response.json();
+                    alert(data.erro || 'Erro ao alterar a palavra-passe.');
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                alert('Erro ao alterar a palavra-passe.');
+            }
+        });
+
+        // Delete account modal
+        deleteAccountBtn.addEventListener('click', () => {
+            deleteConfirmModal.style.display = 'block';
+        });
+
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteConfirmModal.style.display = 'none';
+        });
+
+        confirmDeleteBtn.addEventListener('click', async () => {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile/delete', {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    const data = await response.json();
+                    alert(data.erro || 'Erro ao apagar a conta.');
+                }
+            } catch (error) {
+                console.error('Error deleting account:', error);
+                alert('Erro ao apagar a conta.');
+            }
+        });
+
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === deleteConfirmModal) {
+                deleteConfirmModal.style.display = 'none';
+            }
+        });
+
+        // Load user info when page loads
+        loadUserInfo();
+    </script>
+</body>
+</html> 

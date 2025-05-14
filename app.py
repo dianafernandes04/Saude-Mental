@@ -518,6 +518,119 @@ def minijogos_page():
 def serve_static(path):
     return send_from_directory('static', path)
 
+@app.route('/profile')
+def profile_page():
+    return render_template('profile.html')
+
+@app.route('/api/profile', methods=['GET'])
+@token_required
+def get_profile(username):
+    try:
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT primeiro_nome, username FROM utilizadores WHERE username = ?', (username,))
+            user = cursor.fetchone()
+            
+            if user:
+                return jsonify({
+                    'primeiro_nome': user[0],
+                    'username': user[1]
+                })
+            return jsonify({'erro': 'Utilizador não encontrado'}), 404
+    except Exception as e:
+        print(f"Erro ao obter perfil: {e}")
+        return jsonify({'erro': 'Erro ao obter informações do perfil'}), 500
+
+@app.route('/api/profile/update', methods=['POST'])
+@token_required
+def update_profile(username):
+    try:
+        data = request.get_json()
+        novo_primeiro_nome = data.get('primeiro_nome')
+        novo_username = data.get('username')
+
+        if not novo_primeiro_nome or not novo_username:
+            return jsonify({'erro': 'Dados incompletos'}), 400
+
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            
+            # Verificar se o novo username já existe (se for diferente do atual)
+            if novo_username != username:
+                cursor.execute('SELECT id FROM utilizadores WHERE username = ?', (novo_username,))
+                if cursor.fetchone():
+                    return jsonify({'erro': 'Nome de utilizador já existe'}), 400
+
+            # Atualizar informações
+            cursor.execute('''
+                UPDATE utilizadores 
+                SET primeiro_nome = ?, username = ?
+                WHERE username = ?
+            ''', (novo_primeiro_nome, novo_username, username))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'erro': 'Utilizador não encontrado'}), 404
+                
+            conn.commit()
+            return jsonify({'mensagem': 'Perfil atualizado com sucesso'})
+    except Exception as e:
+        print(f"Erro ao atualizar perfil: {e}")
+        return jsonify({'erro': 'Erro ao atualizar perfil'}), 500
+
+@app.route('/api/profile/password', methods=['POST'])
+@token_required
+def change_password(username):
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+
+        if not current_password or not new_password:
+            return jsonify({'erro': 'Dados incompletos'}), 400
+
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT password FROM utilizadores WHERE username = ?', (username,))
+            user = cursor.fetchone()
+
+            if not user or not check_password_hash(user[0], current_password):
+                return jsonify({'erro': 'Palavra-passe atual incorreta'}), 400
+
+            hashed_password = generate_password_hash(new_password)
+            cursor.execute('''
+                UPDATE utilizadores 
+                SET password = ?
+                WHERE username = ?
+            ''', (hashed_password, username))
+            conn.commit()
+            
+            return jsonify({'mensagem': 'Palavra-passe alterada com sucesso'})
+    except Exception as e:
+        print(f"Erro ao alterar palavra-passe: {e}")
+        return jsonify({'erro': 'Erro ao alterar palavra-passe'}), 500
+
+@app.route('/api/profile/delete', methods=['DELETE'])
+@token_required
+def delete_account(username):
+    try:
+        with sqlite3.connect('conversas.db') as conn:
+            cursor = conn.cursor()
+            
+            # Apagar todas as mensagens do utilizador
+            cursor.execute('DELETE FROM mensagens WHERE utilizador = ?', (username,))
+            
+            # Apagar o utilizador
+            cursor.execute('DELETE FROM utilizadores WHERE username = ?', (username,))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'erro': 'Utilizador não encontrado'}), 404
+                
+            conn.commit()
+            return jsonify({'mensagem': 'Conta apagada com sucesso'})
+    except Exception as e:
+        print(f"Erro ao apagar conta: {e}")
+        return jsonify({'erro': 'Erro ao apagar conta'}), 500
+
 # ========== START ==========
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
