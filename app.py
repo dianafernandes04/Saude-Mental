@@ -394,11 +394,36 @@ def chat():
             "role": "system",
             "content": (
                 "És um assistente de saúde mental. "
-                "Só podes responder a perguntas relacionadas com saúde mental, emoções, bem-estar psicológico, ansiedade, depressão, stress, autocuidado, motivação, autoestima, relações interpessoais, técnicas de relaxamento, etc. "
-                "Se a pergunta não for sobre saúde mental, responde apenas: 'Desculpa, só posso responder a questões relacionadas com saúde mental.' "
+                "Para perguntas específicas que não sejam sobre saúde mental, emoções, bem-estar psicológico, ansiedade, depressão, stress, autocuidado, motivação, autoestima, relações interpessoais ou técnicas de relaxamento, responde educadamente que só podes responder a questões relacionadas com saúde mental. "
+                "No entanto, deves responder normalmente a saudações, agradecimentos e mensagens gerais de conversação. "
                 "Responde sempre em português de Portugal."
             )
         }]
+
+        # Verificar primeiro se a mensagem é sobre saúde mental
+        verificacao = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": """Verifica se esta mensagem está relacionada com qualquer aspecto de saúde mental ou bem-estar emocional, incluindo:
+                - Saúde mental em geral
+                - Emoções e sentimentos
+                - Bem-estar psicológico
+                - Ansiedade, depressão, stress
+                - Autocuidado e autoestima
+                - Motivação e superação
+                - Relações interpessoais
+                - Técnicas de relaxamento
+                - Impacto emocional de situações físicas ou da vida
+                - Frustrações e desafios pessoais
+                - Busca por apoio emocional
+                Responde apenas com 'sim' ou 'não'."""},
+                {"role": "user", "content": mensagem_usuario}
+            ],
+            max_tokens=10,
+            temperature=0
+        )
+        
+        is_mental_health = verificacao.choices[0].message.content.strip().lower() == 'sim'
 
         for m, r in contexto:
             mensagens.append({"role": "user", "content": m})
@@ -414,18 +439,13 @@ def chat():
         )
 
         resposta_base = resposta_modelo.choices[0].message.content.strip()
-        nivel = analisar_nivel_depressao(mensagem_usuario)
+        nivel = analisar_nivel_depressao(mensagem_usuario) if is_mental_health else "Desconhecido"
         emocao = analisar_emocao(mensagem_usuario)
         nome = obter_primeiro_nome(username) if not anonimo else 'Amigo'
         resposta = adaptar_resposta_emocao(emocao, resposta_base, nome)
 
-        # Detectar resposta padrão de fora do tema (verificação flexível)
-        if "só posso responder a perguntas relacionadas com saúde mental" in resposta_base.lower() or \
-           "apenas posso falar sobre saúde mental" in resposta_base.lower() or \
-           "como assistente de saúde mental" in resposta_base.lower():
-            recomendacoes = []
-        else:
-            recomendacoes = gerar_recomendacoes_personalizadas(mensagem_usuario)
+        # Gerar recomendações apenas se for uma pergunta sobre saúde mental
+        recomendacoes = gerar_recomendacoes_personalizadas(mensagem_usuario) if is_mental_health else []
 
         if not anonimo:
             guardar_conversa(username, sessao_id, mensagem_usuario, resposta)

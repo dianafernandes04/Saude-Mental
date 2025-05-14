@@ -126,10 +126,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Text to Speech (Síntese de voz)
-    function speakText(text) {
+    function speakText(text, button) {
         if ('speechSynthesis' in window) {
+            // Cancel any ongoing speech
+            window.speechSynthesis.cancel();
+
             const utter = new SpeechSynthesisUtterance(text);
             utter.lang = 'pt-PT';
+            
+            // Add active class when speaking starts
+            button.classList.add('active');
+            
+            // Remove active class when speech ends
+            utter.onend = () => {
+                button.classList.remove('active');
+            };
+            
+            // Remove active class if speech is interrupted
+            utter.onerror = () => {
+                button.classList.remove('active');
+            };
+            
             window.speechSynthesis.speak(utter);
         }
     }
@@ -149,7 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (type === 'bot') {
-            messageDiv.innerHTML = `<span>${message}</span> <button class="tts-btn" title="Ouvir"><i data-lucide="volume-2"></i></button>`;
+            messageDiv.innerHTML = `
+                <span>${message}</span>
+                <button class="tts-btn" title="Ouvir resposta">
+                    <i data-lucide="volume-2"></i>
+                </button>
+            `;
         } else {
             messageDiv.innerHTML = message;
         }
@@ -157,7 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
         if (type === 'bot') {
             const ttsBtn = messageDiv.querySelector('.tts-btn');
-            ttsBtn.onclick = () => speakText(messageDiv.querySelector('span').innerText);
+            const messageText = messageDiv.querySelector('span').innerText;
+            ttsBtn.onclick = () => speakText(messageText, ttsBtn);
             lucide.createIcons();
         }
     }
