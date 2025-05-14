@@ -314,42 +314,56 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('dark');
         document.querySelector('.historico-lateral').style.display = 'none';
         chatMessages.innerHTML = '';
-        // Aviso de modo anónimo (menor e com botão)
+        
+        // Adiciona classe para estilização específica do modo anônimo
+        document.body.classList.add('anon-mode');
+        
+        // Cria ou atualiza o aviso de modo anônimo
         let aviso = document.getElementById('anon-aviso');
         if (!aviso) {
             aviso = document.createElement('div');
             aviso.id = 'anon-aviso';
-            aviso.style.background = '#ffe8d4';
-            aviso.style.color = '#333';
-            aviso.style.padding = '8px 16px';
-            aviso.style.textAlign = 'center';
-            aviso.style.borderRadius = '8px';
-            aviso.style.margin = '0 auto 10px auto';
-            aviso.style.maxWidth = '350px';
-            aviso.style.position = 'relative';
-            aviso.style.fontSize = '1em';
-            aviso.style.display = 'flex';
-            aviso.style.alignItems = 'center';
-            aviso.style.justifyContent = 'space-between';
         }
-        aviso.innerHTML = 'Você está em modo anónimo. Nenhuma conversa será guardada.' +
-            '<button id="exit-anon-btn" style="margin-left: 16px; background: #333; color: #fff; border: none; border-radius: 6px; padding: 8px 22px; min-width: 110px; cursor: pointer; font-size: 1.08em; font-weight: 600;">Sair</button>';
-        document.querySelector('.conteudo-central').prepend(aviso);
-        anonModeBtn.textContent = 'Sair do Modo Anónimo';
-        // Botão de sair do modo anónimo
+        
+        aviso.innerHTML = `
+            <span>Você está em modo anônimo. Nenhuma conversa será guardada.</span>
+            <button id="exit-anon-btn">Sair do Modo Anônimo</button>
+        `;
+        
+        // Insere o aviso no início da área de chat
+        const chatContainer = document.getElementById('chat-container');
+        chatContainer.insertBefore(aviso, chatContainer.firstChild);
+        
+        // Atualiza o texto do botão de modo anônimo
+        anonModeBtn.textContent = 'Sair do Modo Anônimo';
+        
+        // Adiciona evento ao botão de sair
         document.getElementById('exit-anon-btn').onclick = deactivateAnonMode;
     }
 
     function deactivateAnonMode() {
         anonModeActive = false;
+        
+        // Remove classes específicas do modo anônimo
+        document.body.classList.remove('anon-mode');
         if (previousTheme === 'light') {
             document.body.classList.remove('dark');
         }
+        
+        // Restaura a visibilidade do histórico
         document.querySelector('.historico-lateral').style.display = '';
+        
+        // Limpa as mensagens
         chatMessages.innerHTML = '';
+        
+        // Remove o aviso
         const aviso = document.getElementById('anon-aviso');
-        if (aviso) aviso.remove();
-        anonModeBtn.textContent = 'Modo Anónimo';
+        if (aviso) {
+            aviso.remove();
+        }
+        
+        // Restaura o texto do botão
+        anonModeBtn.textContent = 'Modo Anônimo';
     }
 
     anonModeBtn.addEventListener('click', () => {

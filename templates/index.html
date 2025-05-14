@@ -11,13 +11,14 @@
 <body>
     <header class="main-header">
         <img id="logo" src="/static/images/yourmind-logo.png" alt="Logo">
-        <button class="login-btn" onclick="window.location.href='/login'">Login</button>
+        <button class="login-btn" id="login-button" onclick="window.location.href='/login'" style="display: none;">Login</button>
     </header>
     <main>
         <section class="hero">
             <div class="hero-text">
                 <h1>Bem-vindo ao Sistema de Apoio à Saúde Mental</h1>
-                <p style="font-size:1.3em; margin: 18px 0 0 0; color:#475866;">Converse, reflita, receba apoio e recomendações personalizadas para o seu bem-estar emocional.</p>
+                <p style="font-size:1.3em; margin: 18px 0 28px 0; color:#475866;">Converse, reflita, receba apoio e recomendações personalizadas para o seu bem-estar emocional.</p>
+                <button class="start-chat-btn" onclick="startChat()">Começar Chat</button>
             </div>
             <div class="hero-img">
                 <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80" alt="Apoio emocional">
@@ -38,5 +39,30 @@
             </div>
         </section>
     </main>
+
+    <script>
+        // Verifica o estado de autenticação quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const loginButton = document.getElementById('login-button');
+            
+            // Mostra o botão de login apenas se o usuário não estiver logado
+            if (!token) {
+                loginButton.style.display = 'block';
+            }
+        });
+
+        function startChat() {
+            // Verifica se existe um token no localStorage
+            const token = localStorage.getItem('token');
+            if (token) {
+                // Se estiver logado, vai direto para o chat
+                window.location.href = '/chat';
+            } else {
+                // Se não estiver logado, redireciona para o login
+                window.location.href = '/login';
+            }
+        }
+    </script>
 </body>
 </html> 

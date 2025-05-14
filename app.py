@@ -384,9 +384,9 @@ def chat():
     else:
         if not token:
             return jsonify({"resposta": "Token inválido!"}), 400
-        username = verificar_token(token)
-        if not username:
-            return jsonify({"resposta": "Token expirado ou inválido!"}), 401
+    username = verificar_token(token)
+    if not username:
+        return jsonify({"resposta": "Token expirado ou inválido!"}), 401
 
     try:
         contexto = [] if anonimo else obter_contexto(sessao_id)
@@ -451,7 +451,7 @@ def chat():
             guardar_conversa(username, sessao_id, mensagem_usuario, resposta)
             # Verificar novas conquistas
             novas_conquistas = verificar_conquistas(username)
-            
+
         return jsonify({
             "resposta": resposta,
             "nivel": nivel,
