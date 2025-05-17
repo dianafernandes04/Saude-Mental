@@ -34,12 +34,7 @@
             </button>
         </div>
         <div id="menu-dropdown" style="display:none; position:absolute; top:60px; right:20px; background:#f9f9fb; color:#475866; border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,0.10); min-width:220px; z-index:1000; font-family:'Poppins',sans-serif; font-weight:500; font-size:0.88em; padding:0; border:none;">
-            <div class="menu-item" id="minijogos-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">
-                Mini-Jogos de Relaxamento
-            </div>
-            <div class="menu-item" id="calendario-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">
-                Calendário de Emoções
-            </div>
+                        <div class="menu-item" id="minijogos-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">                Mini-Jogos de Relaxamento            </div>            <div class="menu-item" id="calendario-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">                Calendário de Emoções            </div>            <div class="menu-item" id="forum-link" style="padding:12px 22px; cursor:pointer; color:#475866; border-radius:10px; transition:background 0.2s; font-weight:500; font-size:0.88em;">                Fórum Emocional            </div>
         </div>
     </header>
 
@@ -90,26 +85,7 @@
         e.stopPropagation();
         menuDropdown.style.display = menuDropdown.style.display === 'block' ? 'none' : 'block';
     };
-    document.getElementById('minijogos-link').onclick = function() {
-        window.location.href = '/minijogos';
-    };
-    document.body.addEventListener('click', function() {
-        menuDropdown.style.display = 'none';
-    });
-    // Hover effect para o menu
-    document.getElementById('minijogos-link').onmouseover = function() {
-        this.style.background = '#eaf6fa';
-    };
-    document.getElementById('minijogos-link').onmouseout = function() {
-        this.style.background = 'none';
-    };
-    // Hover effect para o calendário
-    document.getElementById('calendario-link').onmouseover = function() {
-        this.style.background = '#eaf6fa';
-    };
-    document.getElementById('calendario-link').onmouseout = function() {
-        this.style.background = 'none';
-    };
+        document.getElementById('minijogos-link').onclick = function() {        window.location.href = '/minijogos';    };    document.getElementById('forum-link').onclick = function() {        window.location.href = '/forum';    };    document.body.addEventListener('click', function() {        menuDropdown.style.display = 'none';    });    // Hover effect para o menu    document.getElementById('minijogos-link').onmouseover = function() {        this.style.background = '#eaf6fa';    };    document.getElementById('minijogos-link').onmouseout = function() {        this.style.background = 'none';    };    // Hover effect para o calendário    document.getElementById('calendario-link').onmouseover = function() {        this.style.background = '#eaf6fa';    };    document.getElementById('calendario-link').onmouseout = function() {        this.style.background = 'none';    };    // Hover effect para o fórum    document.getElementById('forum-link').onmouseover = function() {        this.style.background = '#eaf6fa';    };    document.getElementById('forum-link').onmouseout = function() {        this.style.background = 'none';    };
     // Navegação para o calendário
     document.getElementById('calendario-link').onclick = function() {
         window.location.href = '/calendario';

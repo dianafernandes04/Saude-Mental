@@ -67,6 +67,7 @@
             if (response.ok) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('sessionId', data.sessao_id);
+                localStorage.setItem('username', data.username);
                 alert('Login efetuado com sucesso');
                 window.location.href = '/chat';
             } else {

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fórum Emocional</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="forum-page">
+    <header>
+        <img id="logo" src="/static/images/yourmind-logo.png" alt="Logo">
+        <h1>Fórum Emocional</h1>
+        <button id="voltar-chat">
+            <i data-lucide="arrow-left"></i> Voltar ao Chat
+        </button>
+    </header>
+
+    <main>
+        <div id="forum-container">
+            <div class="forum-actions">
+                <button id="nova-publicacao" class="primary-btn">
+                    <i data-lucide="plus-circle"></i>
+                    Nova Publicação
+                </button>
+                <div class="forum-filters">
+                    <button id="filtro-todos" class="filter-btn active">Todos</button>
+                    <button id="filtro-meus" class="filter-btn">Minhas Publicações</button>
+                    <button id="filtro-anonimos" class="filter-btn">Anónimos</button>
+                </div>
+            </div>
+
+            <div id="publicacoes-lista">
+                <!-- Posts will be loaded here dynamically -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para nova publicação -->
+    <div id="nova-publicacao-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-header">
+                <h2>Nova Publicação</h2>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="titulo-post">Título</label>
+                    <input type="text" id="titulo-post" placeholder="Digite um título para sua publicação">
+                </div>
+                <div class="form-group">
+                    <label for="conteudo-post">Conteúdo</label>
+                    <textarea id="conteudo-post" name="conteudo-post" rows="6" placeholder="Compartilhe sua experiência..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="post-anonimo">
+                        <span class="checkmark"></span>
+                        Publicar anonimamente
+                    </label>
+                </div>
+                <button id="publicar-btn" class="primary-btn">Publicar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para visualizar/responder publicação -->
+    <div id="visualizar-post-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="modal-header">
+                <h2 id="post-titulo"></h2>
+            </div>
+            <div class="modal-body">
+                <div id="post-detalhes"></div>
+                <div id="post-comentarios"></div>
+                <div class="form-group">
+                    <textarea id="novo-comentario" rows="3" placeholder="Escreva um comentário..."></textarea>
+                    <div class="comentario-actions">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="comentario-anonimo">
+                            <span class="checkmark"></span>
+                            Comentar anonimamente
+                        </label>
+                        <button id="enviar-comentario" class="primary-btn">Enviar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script src="/static/forum.js"></script>
+    <script>
+        lucide.createIcons();
+
+        document.getElementById('voltar-chat').onclick = function() {
+            window.location.href = '/chat';
+        };
+        document.getElementById('logo').onclick = function() {
+            window.location.href = '/';
+        };
+    </script>
+</body>
+</html> 

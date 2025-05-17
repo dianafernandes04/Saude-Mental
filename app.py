@@ -66,6 +66,32 @@ def criar_base_dados():
             )
         ''')
         
+        # Criar tabelas do fórum
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS forum_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                titulo TEXT NOT NULL,
+                conteudo TEXT NOT NULL,
+                autor_id TEXT NOT NULL,
+                anonimo BOOLEAN NOT NULL DEFAULT FALSE,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (autor_id) REFERENCES utilizadores(username)
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS forum_comentarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL,
+                conteudo TEXT NOT NULL,
+                autor_id TEXT NOT NULL,
+                anonimo BOOLEAN NOT NULL DEFAULT FALSE,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+                FOREIGN KEY (autor_id) REFERENCES utilizadores(username)
+            )
+        ''')
+        
         # Inserir conquistas iniciais se não existirem
         cursor.execute('SELECT COUNT(*) FROM conquistas')
         if cursor.fetchone()[0] == 0:
@@ -356,13 +382,19 @@ def login():
 
     with sqlite3.connect('conversas.db') as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT password FROM utilizadores WHERE username = ?', (username,))
+        cursor.execute('SELECT password, primeiro_nome FROM utilizadores WHERE username = ?', (username,))
         row = cursor.fetchone()
 
     if row and check_password_hash(row[0], password):
         token = gerar_token(username)
         sessao_id = f"{username}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-        return jsonify({'mensagem': 'Login feito!', 'token': token, 'sessao_id': sessao_id}), 200
+        return jsonify({
+            'mensagem': 'Login feito!', 
+            'token': token, 
+            'sessao_id': sessao_id,
+            'username': username,
+            'primeiro_nome': row[1]
+        }), 200
     else:
         tentativas.append(time.time())
         tentativas_login[username] = tentativas
@@ -828,6 +860,304 @@ def get_conquistas(username):
     except Exception as e:
         print(f"Erro ao buscar conquistas: {e}")
         return jsonify({'erro': 'Erro ao buscar conquistas'}), 500
+
+# Forum routes
+@app.route('/forum')
+def forum():
+    return render_template('forum.html')
+
+@app.route('/api/forum/posts', methods=['GET'])
+def listar_posts():
+    filtro = request.args.get('filtro', 'todos')
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Base query
+        query = """
+            SELECT p.id, p.titulo, p.conteudo, p.data_criacao, p.anonimo,
+                   CASE WHEN p.anonimo THEN NULL ELSE p.autor_id END as autor_nome,
+                   p.autor_id,
+                   COUNT(c.id) as num_comentarios
+            FROM forum_posts p
+            LEFT JOIN forum_comentarios c ON p.id = c.post_id
+        """
+
+        # Apply filters
+        if filtro == 'meus':
+            query += " WHERE p.autor_id = ?"
+            params = [username]
+        elif filtro == 'anonimos':
+            query += " WHERE p.anonimo = 1"
+            params = []
+        else:  # todos
+            params = []
+
+        query += " GROUP BY p.id, p.titulo, p.conteudo, p.data_criacao, p.anonimo, p.autor_id"
+        query += " ORDER BY p.data_criacao DESC"
+
+        if filtro == 'meus':
+            cur.execute(query, params)
+        else:
+            cur.execute(query)
+
+        posts = []
+        for row in cur.fetchall():
+            post = {
+                'id': row[0],
+                'titulo': row[1],
+                'conteudo': row[2],
+                'data_criacao': row[3],
+                'anonimo': bool(row[4]),
+                'autor_nome': row[5],
+                'autor_id': row[6],
+                'num_comentarios': row[7]
+            }
+            posts.append(post)
+
+        print("Posts being sent:", posts)  # Debug log
+        return jsonify(posts)
+
+    except Exception as e:
+        print(f"Erro ao carregar posts: {str(e)}")
+        return jsonify({'error': 'Erro ao carregar posts'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/forum/posts', methods=['POST'])
+def criar_post():
+    data = request.get_json()
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    titulo = data.get('titulo')
+    conteudo = data.get('conteudo')
+    anonimo = data.get('anonimo', False)
+
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Insert new post
+        cur.execute("""
+            INSERT INTO forum_posts (titulo, conteudo, autor_id, anonimo, data_criacao)
+            VALUES (?, ?, ?, ?, datetime('now'))
+        """, (titulo, conteudo, username, 1 if anonimo else 0))
+
+        post_id = cur.lastrowid
+        conn.commit()
+
+        return jsonify({'id': post_id, 'message': 'Post criado com sucesso'})
+
+    except Exception as e:
+        print(f"Erro ao criar post: {str(e)}")
+        return jsonify({'error': 'Erro ao criar post'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/forum/posts/<int:post_id>', methods=['GET'])
+def get_post(post_id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Get post details
+        cur.execute("""
+            SELECT p.id, p.titulo, p.conteudo, p.data_criacao, p.anonimo,
+                   CASE WHEN p.anonimo THEN NULL ELSE p.autor_id END as autor_nome,
+                   p.autor_id
+            FROM forum_posts p
+            WHERE p.id = ?
+        """, (post_id,))
+
+        post = cur.fetchone()
+        if not post:
+            return jsonify({'error': 'Post não encontrado'}), 404
+
+        # Get comments
+        cur.execute("""
+            SELECT c.id, c.conteudo, c.data_criacao, c.anonimo,
+                   CASE WHEN c.anonimo THEN NULL ELSE c.autor_id END as autor_nome,
+                   c.autor_id
+            FROM forum_comentarios c
+            WHERE c.post_id = ?
+            ORDER BY c.data_criacao ASC
+        """, (post_id,))
+
+        comentarios = []
+        for row in cur.fetchall():
+            comentario = {
+                'id': row[0],
+                'conteudo': row[1],
+                'data_criacao': row[2],
+                'anonimo': bool(row[3]),
+                'autor_nome': row[4],
+                'autor_id': row[5]
+            }
+            comentarios.append(comentario)
+
+        response_data = {
+            'id': post[0],
+            'titulo': post[1],
+            'conteudo': post[2],
+            'data_criacao': post[3],
+            'anonimo': bool(post[4]),
+            'autor_nome': post[5],
+            'autor_id': post[6],
+            'comentarios': comentarios
+        }
+
+        print("Post data being sent:", response_data)  # Debug log
+        return jsonify(response_data)
+
+    except Exception as e:
+        print(f"Erro ao carregar post: {str(e)}")
+        return jsonify({'error': 'Erro ao carregar post'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/forum/posts/<int:post_id>', methods=['DELETE'])
+def apagar_post(post_id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Check if user owns the post
+        cur.execute("SELECT autor_id FROM forum_posts WHERE id = ?", (post_id,))
+        post = cur.fetchone()
+        
+        if not post:
+            return jsonify({'error': 'Post não encontrado'}), 404
+        
+        if post[0] != username:
+            return jsonify({'error': 'Você não tem permissão para apagar este post'}), 403
+
+        # Delete post and its comments (comments will be deleted automatically due to ON DELETE CASCADE)
+        cur.execute("DELETE FROM forum_posts WHERE id = ?", (post_id,))
+        conn.commit()
+
+        return jsonify({'message': 'Post apagado com sucesso'})
+
+    except Exception as e:
+        print(f"Erro ao apagar post: {str(e)}")
+        return jsonify({'error': 'Erro ao apagar post'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/forum/posts/<int:post_id>/comentarios', methods=['POST'])
+def criar_comentario(post_id):
+    data = request.get_json()
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    conteudo = data.get('conteudo')
+    anonimo = data.get('anonimo', False)
+
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Check if post exists
+        cur.execute("SELECT id FROM forum_posts WHERE id = ?", (post_id,))
+        if not cur.fetchone():
+            return jsonify({'error': 'Post não encontrado'}), 404
+
+        # Insert comment
+        cur.execute("""
+            INSERT INTO forum_comentarios (post_id, conteudo, autor_id, anonimo, data_criacao)
+            VALUES (?, ?, ?, ?, datetime('now'))
+        """, (post_id, conteudo, username, 1 if anonimo else 0))
+
+        comentario_id = cur.lastrowid
+        conn.commit()
+
+        return jsonify({'id': comentario_id, 'message': 'Comentário criado com sucesso'})
+
+    except Exception as e:
+        print(f"Erro ao criar comentário: {str(e)}")
+        return jsonify({'error': 'Erro ao criar comentário'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/forum/comentarios/<int:comentario_id>', methods=['DELETE'])
+def apagar_comentario(comentario_id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    # Verify token
+    username = verificar_token(token)
+    if not username:
+        return jsonify({'error': 'Token inválido'}), 401
+
+    try:
+        conn = sqlite3.connect('conversas.db')
+        cur = conn.cursor()
+
+        # Check if user owns the comment
+        cur.execute("SELECT autor_id FROM forum_comentarios WHERE id = ?", (comentario_id,))
+        comentario = cur.fetchone()
+        
+        if not comentario:
+            return jsonify({'error': 'Comentário não encontrado'}), 404
+        
+        if comentario[0] != username:
+            return jsonify({'error': 'Você não tem permissão para apagar este comentário'}), 403
+
+        # Delete comment
+        cur.execute("DELETE FROM forum_comentarios WHERE id = ?", (comentario_id,))
+        conn.commit()
+
+        return jsonify({'message': 'Comentário apagado com sucesso'})
+
+    except Exception as e:
+        print(f"Erro ao apagar comentário: {str(e)}")
+        return jsonify({'error': 'Erro ao apagar comentário'}), 500
+    finally:
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
 
 # ========== START ==========
 if __name__ == '__main__':
