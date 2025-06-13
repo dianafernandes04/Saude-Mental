@@ -1,5 +1,3 @@
-    localStorage.clear();
-
     document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');

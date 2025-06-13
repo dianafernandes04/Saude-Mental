@@ -14,7 +14,8 @@ def criar_base_dados():
         utilizador TEXT NOT NULL,
         mensagem TEXT NOT NULL,
         resposta TEXT NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        emocao TEXT
     )
 ''')
 
@@ -24,7 +25,8 @@ def criar_base_dados():
         CREATE TABLE IF NOT EXISTS utilizadores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            primeiro_nome TEXT NOT NULL
         )
     ''')
 

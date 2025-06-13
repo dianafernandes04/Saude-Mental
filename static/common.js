@@ -35,10 +35,35 @@ if (musicToggle && backgroundMusic) {
 }
 
 // Check authentication
-function checkAuth() {
+async function checkAuth() {
     const token = localStorage.getItem('token');
     if (!token) {
-        window.location.href = 'login.html';
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/historico', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ token })
+        });
+
+        if (!response.ok) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('sessionId');
+            localStorage.removeItem('username');
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('username');
+        window.location.href = '/login';
     }
 }
 
@@ -48,6 +73,7 @@ if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('token');
         localStorage.removeItem('sessionId');
-        window.location.href = 'login.html';
+        localStorage.removeItem('username');
+        window.location.href = '/login';
     });
 } 
